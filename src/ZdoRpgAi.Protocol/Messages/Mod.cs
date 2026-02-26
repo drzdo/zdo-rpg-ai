@@ -1,6 +1,8 @@
 namespace ZdoRpgAi.Protocol.Messages;
 
-public enum ModToClientToServerMessageType {
+// Mod → Server
+
+public enum ModToServerMessageType {
     PlayerAdded,
     TargetChanged,
     CellChange,
@@ -8,9 +10,9 @@ public enum ModToClientToServerMessageType {
     GetCharactersWhoHearResponse,
 }
 
-// Payloads
 public record PlayerAddedPayload(string PlayerId);
 public record TargetChangedPayload(string PlayerId, string? NpcId);
 public record CellChangePayload(string PlayerId, string CellName);
+public record GameSaveLoadPayload();
 public record NearbyCharacterInfo(string CharacterId, float Distance);
 public record GetCharactersWhoHearResponsePayload(NearbyCharacterInfo[] Characters);

@@ -1,7 +1,19 @@
 namespace ZdoRpgAi.Protocol.Messages;
 
-public enum ServerToClientToModMessageType {
+// Server → Client
+
+public enum ServerToClientMessageType {
+    NpcSpeaksMp3,
+}
+
+public record NpcSpeaksMp3Payload(string NpcId, string Text, double DurationSec);
+
+// Server → Mod
+
+public enum ServerToModMessageType {
     NpcSpeaks,
+    SpeechRecognitionInProgress,
+    SpeechRecognitionComplete,
     GetCharactersWhoHear,
     GetNpcInfo,
     GetPlayerInfo,
@@ -14,14 +26,14 @@ public enum ServerToClientToModMessageType {
     ShowMessageBox,
 }
 
-// RPC payloads
+public record NpcSpeaksPayload();
+public record SpeechRecognitionInProgressPayload(string PlayerId, string Text);
+public record SpeechRecognitionCompletePayload(string PlayerId, string Text);
 public record GetCharactersWhoHearRequestPayload(string CharacterId);
 public record GetNpcInfoRequestPayload(string NpcId);
 public record GetNpcInfoResponsePayload(string ObjectId, string Name, string Race, string Sex);
 public record GetPlayerInfoRequestPayload(string PlayerId);
 public record GetPlayerInfoResponsePayload(string ObjectId, string Name, string Race, string Sex);
-
-// Fire-and-forget payloads
 public record SpawnOnGroundInFrontOfCharacterPayload(string NpcId, string ItemId, int Count = 1);
 public record PlaySound3dOnCharacterPayload(string NpcId, string Sound);
 public record NpcStartFollowCharacterPayload(string NpcId, string TargetCharacterId);

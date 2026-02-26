@@ -3,21 +3,15 @@ using System.Text.Json.Serialization;
 namespace ZdoRpgAi.Protocol.Messages;
 
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
-[JsonSerializable(typeof(PlayerSpeaksPayload))]
-[JsonSerializable(typeof(PlayerSpeaksAudioPayload))]
-[JsonSerializable(typeof(PlayerStartSpeakPayload))]
-[JsonSerializable(typeof(PlayerStopSpeakPayload))]
+// Server → Client
+[JsonSerializable(typeof(NpcSpeaksMp3Payload))]
+// Server → Mod
 [JsonSerializable(typeof(NpcSpeaksPayload))]
-[JsonSerializable(typeof(GetCharactersWhoHearRequestPayload))]
-[JsonSerializable(typeof(NearbyCharacterInfo))]
-[JsonSerializable(typeof(GetCharactersWhoHearResponsePayload))]
-[JsonSerializable(typeof(GetNpcInfoRequestPayload))]
-[JsonSerializable(typeof(GetNpcInfoResponsePayload))]
 [JsonSerializable(typeof(SpeechRecognitionInProgressPayload))]
 [JsonSerializable(typeof(SpeechRecognitionCompletePayload))]
-[JsonSerializable(typeof(PlayerAddedPayload))]
-[JsonSerializable(typeof(TargetChangedPayload))]
-[JsonSerializable(typeof(CellChangePayload))]
+[JsonSerializable(typeof(GetCharactersWhoHearRequestPayload))]
+[JsonSerializable(typeof(GetNpcInfoRequestPayload))]
+[JsonSerializable(typeof(GetNpcInfoResponsePayload))]
 [JsonSerializable(typeof(GetPlayerInfoRequestPayload))]
 [JsonSerializable(typeof(GetPlayerInfoResponsePayload))]
 [JsonSerializable(typeof(SpawnOnGroundInFrontOfCharacterPayload))]
@@ -27,6 +21,20 @@ namespace ZdoRpgAi.Protocol.Messages;
 [JsonSerializable(typeof(NpcAttackPayload))]
 [JsonSerializable(typeof(NpcStopAttackPayload))]
 [JsonSerializable(typeof(ShowMessageBoxPayload))]
-[JsonSerializable(typeof(HelloPayload))]
+// Client → Mod
+[JsonSerializable(typeof(StartSessionPayload))]
 [JsonSerializable(typeof(SayMp3FilePayload))]
+// Client → Both
+[JsonSerializable(typeof(PlayerStartSpeakPayload))]
+[JsonSerializable(typeof(PlayerStopSpeakPayload))]
+// Client → Server
+[JsonSerializable(typeof(PlayerSpeaksTextPayload))]
+[JsonSerializable(typeof(PlayerSpeaksAudioPayload))]
+// Mod → Server
+[JsonSerializable(typeof(PlayerAddedPayload))]
+[JsonSerializable(typeof(TargetChangedPayload))]
+[JsonSerializable(typeof(CellChangePayload))]
+[JsonSerializable(typeof(GameSaveLoadPayload))]
+[JsonSerializable(typeof(NearbyCharacterInfo))]
+[JsonSerializable(typeof(GetCharactersWhoHearResponsePayload))]
 public partial class PayloadJsonContext : JsonSerializerContext;
