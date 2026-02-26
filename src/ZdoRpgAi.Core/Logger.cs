@@ -3,6 +3,14 @@ using Serilog.Events;
 
 namespace ZdoRpgAi.Core;
 
+public enum LogLevel {
+    Trace,
+    Debug,
+    Info,
+    Warn,
+    Error
+}
+
 public interface ILog {
     void Trace(string message);
     void Trace(string template, params object[] args);
@@ -19,25 +27,26 @@ public interface ILog {
 }
 
 public class LogConfig {
-    public LogEventLevel ConsoleLevel { get; set; } = LogEventLevel.Information;
-    public LogEventLevel FileLevel { get; set; } = LogEventLevel.Information;
+    public LogLevel ConsoleLevel { get; set; } = LogLevel.Info;
+    public LogLevel FileLevel { get; set; } = LogLevel.Info;
     public string? FilePath { get; set; }
 }
 
 public static class Logger {
     public static ILog Get<T>() => new SerilogLog(Log.ForContext<T>());
+    public static void Flush() => Log.CloseAndFlush();
 
     public static void Configure(LogConfig config) {
         var loggerConfig = new LoggerConfiguration()
             .MinimumLevel.Verbose()
             .WriteTo.Console(
-                restrictedToMinimumLevel: config.ConsoleLevel,
+                restrictedToMinimumLevel: ToSerilog(config.ConsoleLevel),
                 outputTemplate: "{Timestamp:HH:mm:ss.fff} {Level:u3} [{SourceContext}] {Message:lj}{NewLine}{Exception}");
 
         if (config.FilePath != null) {
             loggerConfig.WriteTo.File(
                 config.FilePath,
-                restrictedToMinimumLevel: config.FileLevel,
+                restrictedToMinimumLevel: ToSerilog(config.FileLevel),
                 rollingInterval: RollingInterval.Day,
                 retainedFileCountLimit: 5,
                 outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} {Level:u3} [{SourceContext}] {Message:lj}{NewLine}{Exception}");
@@ -45,6 +54,15 @@ public static class Logger {
 
         Log.Logger = loggerConfig.CreateLogger();
     }
+
+    private static LogEventLevel ToSerilog(LogLevel level) => level switch {
+        LogLevel.Trace => LogEventLevel.Verbose,
+        LogLevel.Debug => LogEventLevel.Debug,
+        LogLevel.Info => LogEventLevel.Information,
+        LogLevel.Warn => LogEventLevel.Warning,
+        LogLevel.Error => LogEventLevel.Error,
+        _ => LogEventLevel.Information
+    };
 }
 
 internal class SerilogLog(ILogger logger) : ILog {

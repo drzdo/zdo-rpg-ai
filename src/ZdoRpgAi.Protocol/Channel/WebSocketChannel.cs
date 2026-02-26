@@ -35,7 +35,8 @@ public class WebSocketChannel : IChannel {
                 await _sendLock.WaitAsync(_cts.Token);
                 try {
                     await _socket.SendAsync(bytes, WebSocketMessageType.Binary, true, _cts.Token);
-                } finally {
+                }
+                finally {
                     _sendLock.Release();
                 }
             }
@@ -46,7 +47,8 @@ public class WebSocketChannel : IChannel {
                 await _sendLock.WaitAsync(_cts.Token);
                 try {
                     await _socket.SendAsync(bytes, WebSocketMessageType.Text, true, _cts.Token);
-                } finally {
+                }
+                finally {
                     _sendLock.Release();
                 }
             }

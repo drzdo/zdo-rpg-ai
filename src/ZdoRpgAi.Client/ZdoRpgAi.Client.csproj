@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ZdoRpgAi.Core\ZdoRpgAi.Core.csproj" />
+    <ProjectReference Include="..\ZdoRpgAi.Protocol\ZdoRpgAi.Protocol.csproj" />
   </ItemGroup>
 
 </Project>

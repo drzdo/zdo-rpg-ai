@@ -22,16 +22,18 @@ public class RpcChannel {
         _channel.Disconnected += OnChannelDisconnected;
     }
 
-    public void Publish(string type, JsonObject? payload = null, byte[]? binary = null) {
+    public int Publish(string type, JsonObject? payload = null, byte[]? binary = null) {
         var id = Interlocked.Increment(ref _nextId);
         var msg = new Message(type, id, null, payload, binary);
         _channel.SendMessage(msg);
+        return id;
     }
 
-    public void Respond(string type, int responseTo, JsonObject? payload = null) {
+    public int Respond(string type, int responseTo, JsonObject? payload = null) {
         var id = Interlocked.Increment(ref _nextId);
         var msg = new Message(type, id, responseTo, payload, null);
         _channel.SendMessage(msg);
+        return id;
     }
 
     public async Task<Message> CallAsync(string type, JsonObject? payload = null, int? timeoutMs = null) {

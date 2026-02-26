@@ -5,3 +5,5 @@ obj/
 .vs/
 .tmp/
 .DS_Store
+config.json
+.tmp/

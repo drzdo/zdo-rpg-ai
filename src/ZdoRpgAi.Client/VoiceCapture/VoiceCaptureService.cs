@@ -37,7 +37,7 @@ public class VoiceCaptureService : IDisposable {
     private readonly IMicrophoneListener _capture;
     private readonly IHotkeyListener? _hotkey;
 
-    private readonly Channel<byte[]> _audioChannel;
+    private readonly System.Threading.Channels.Channel<byte[]> _audioChannel;
     private volatile bool _isActive;
     private int _activeFrameCount;
     private int _activeZeroFrameCount;
@@ -53,7 +53,7 @@ public class VoiceCaptureService : IDisposable {
         _capture.FrameCaptured += HandleFrameCaptured;
         _hotkey = hotkey;
 
-        _audioChannel = Channel.CreateBounded<byte[]>(new BoundedChannelOptions(64) {
+        _audioChannel = System.Threading.Channels.Channel.CreateBounded<byte[]>(new BoundedChannelOptions(64) {
             FullMode = BoundedChannelFullMode.DropOldest,
             SingleWriter = true,
             SingleReader = true

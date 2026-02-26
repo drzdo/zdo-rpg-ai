@@ -1,0 +1,40 @@
+{
+  // Logging configuration
+  "log": {
+    "consoleLevel": "info",
+    "fileLevel": "info",
+    "filePath": "logs/client.log"
+  },
+
+  // Server connection
+  "server": {
+    "host": "localhost",
+    "port": 5000,
+    "maxMessageSize": 10485760,
+    "rpcTimeoutMs": 5000,
+    "reconnectDelayMs": 2000
+  },
+
+  // OpenMW mod IPC
+  "mod": {
+    "dataDir": "/path/to/openmw/data",
+    "logFilePath": "/path/to/openmw/openmw.log",
+    "mp3MaxFiles": 10,
+    "pollIntervalMs": 50
+  },
+
+  "stripDiacritics": false,
+
+  // Voice capture (optional)
+  "voiceCapture": {
+    "enabled": false,
+    "sampleRate": 16000,
+    "frameSizeMs": 20,
+    "deviceIndex": -1,
+    "pushToTalk": {
+      "key": "Y",
+      "subMode": "hold",
+      "releaseDelayMs": 400
+    }
+  }
+}
