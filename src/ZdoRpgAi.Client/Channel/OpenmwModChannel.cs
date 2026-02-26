@@ -1,6 +1,8 @@
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using ZdoRpgAi.Core;
 using ZdoRpgAi.Protocol.Channel;
+using ZdoRpgAi.Protocol.Messages;
 
 namespace ZdoRpgAi.Client.Channel;
 
@@ -67,6 +69,8 @@ public class OpenmwModChannel : IChannel {
         }
 
         try {
+            await HandshakeAsync();
+
             while (!_cts.Token.IsCancellationRequested) {
                 try {
                     ReadLogLines();
@@ -81,6 +85,91 @@ public class OpenmwModChannel : IChannel {
         finally {
             Disconnected?.Invoke();
         }
+    }
+
+    private async Task HandshakeAsync() {
+        var sessionId = Guid.NewGuid().ToString("N")[..8];
+
+        // Build and write StartSession message directly to outfile
+        var payload = new StartSessionPayload(sessionId);
+        var data = JsonSerializer.SerializeToNode(payload, PayloadJsonContext.Default.StartSessionPayload)!.AsObject();
+        var msg = new Message(nameof(ClientToModMessageType.StartSession), 1, null, data, null);
+        var json = msg.ToJson().ToJsonString();
+
+        _pendingMessages.Add((msg.Id, json));
+        FlushOutFile();
+
+        Log.Info("Waiting for mod handshake (sessionId={SessionId})...", sessionId);
+
+        // Poll log for StartSessionAck with matching sessionId
+        while (!_cts.Token.IsCancellationRequested) {
+            if (TryReadHandshakeAck(sessionId)) {
+                Log.Info("Connected to mod (sessionId={SessionId})", sessionId);
+                return;
+            }
+            await Task.Delay(_pollIntervalMs, _cts.Token);
+        }
+    }
+
+    private bool TryReadHandshakeAck(string sessionId) {
+        if (!File.Exists(_logFilePath)) return false;
+
+        var fileInfo = new FileInfo(_logFilePath);
+        if (fileInfo.Length < _logPosition) _logPosition = 0;
+        if (fileInfo.Length == _logPosition) return false;
+
+        string newContent;
+        try {
+            using var fs = new FileStream(_logFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            fs.Seek(_logPosition, SeekOrigin.Begin);
+            using var reader = new StreamReader(fs);
+            newContent = reader.ReadToEnd();
+            _logPosition = fs.Position;
+        }
+        catch (IOException) {
+            return false;
+        }
+
+        if (string.IsNullOrEmpty(newContent)) return false;
+
+        foreach (var line in newContent.Split('\n')) {
+            var ackIdx = line.IndexOf(AckPrefix, StringComparison.Ordinal);
+            if (ackIdx >= 0) {
+                var idStr = line[(ackIdx + AckPrefix.Length)..].Trim();
+                if (int.TryParse(idStr, out var ackedId)) {
+                    ProcessModAck(ackedId);
+                }
+            }
+
+            var msgIdx = line.IndexOf(MsgPrefix, StringComparison.Ordinal);
+            if (msgIdx < 0) continue;
+
+            var jsonStr = line[(msgIdx + MsgPrefix.Length)..];
+            JsonObject? obj;
+            try {
+                obj = JsonNode.Parse(jsonStr)?.AsObject();
+            }
+            catch {
+                continue;
+            }
+            if (obj == null) continue;
+
+            var type = obj["type"]?.GetValue<string>();
+            if (type != "StartSessionAck") continue;
+
+            var ackSessionId = obj["data"]?["sessionId"]?.GetValue<string>();
+            if (ackSessionId != sessionId) continue;
+
+            var msgId = obj["id"]?.GetValue<int>() ?? 0;
+            if (msgId > _lastSeenModMsgId) {
+                _lastSeenModMsgId = msgId;
+                _lastProcessedModMsgId = msgId;
+            }
+
+            return true;
+        }
+
+        return false;
     }
 
     public void Close() {

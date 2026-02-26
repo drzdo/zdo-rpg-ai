@@ -1,8 +1,6 @@
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using ZdoRpgAi.Core;
 using ZdoRpgAi.Protocol.Channel;
-using ZdoRpgAi.Protocol.Messages;
 using ZdoRpgAi.Protocol.Rpc;
 
 namespace ZdoRpgAi.Client.App;
@@ -38,8 +36,6 @@ public class ClientChannelBridge : IDisposable {
         _server.Disconnected += HandleServerDisconnected;
         _modRpc.MessageReceived += HandleModMessage;
         _modRpc.Disconnected += HandleModDisconnected;
-
-        SendStartSession();
 
         using var modReg = ct.Register(() => _modRpc.Close());
 
@@ -110,15 +106,8 @@ public class ClientChannelBridge : IDisposable {
 
     private void HandleModDisconnected() {
         _modIdToOriginalId.Clear();
-        SendStartSession();
         Log.Info("Mod disconnected");
         DisconnectedFromMod?.Invoke();
-    }
-
-    private void SendStartSession() {
-        var payload = new StartSessionPayload();
-        var data = JsonSerializer.SerializeToNode(payload, PayloadJsonContext.Default.StartSessionPayload)!.AsObject();
-        _modRpc.Publish(nameof(ClientToModMessageType.StartSession), data);
     }
 
     private static void TrimNat(Dictionary<int, int> nat) {

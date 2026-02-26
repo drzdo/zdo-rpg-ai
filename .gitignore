@@ -6,4 +6,5 @@ obj/
 .tmp/
 .DS_Store
 config.json
+BuildInfo.g.cs
 .tmp/

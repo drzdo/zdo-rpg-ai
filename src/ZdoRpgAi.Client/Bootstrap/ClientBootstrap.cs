@@ -17,7 +17,6 @@ public static class ClientBootstrap {
     }
 
     public static ClientApplication Create(ClientConfig config) {
-
         var modChannel = new OpenmwModChannel(config.Mod.DataDir, config.Mod.LogFilePath, config.Mod.PollIntervalMs);
         var modRpc = new RpcChannel(modChannel);
         var server = new ServerConnection(config.Server);

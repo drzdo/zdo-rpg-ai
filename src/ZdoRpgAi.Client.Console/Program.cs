@@ -3,7 +3,7 @@ using ZdoRpgAi.Client.Bootstrap;
 using ZdoRpgAi.Core;
 using ZdoRpgAi.Util;
 
-var parser = new CommandLineArgsParser("Zdo RPG AI Client", "1.0.0");
+var parser = new CommandLineArgsParser("Zdo RPG AI Client", BuildInfo.Version);
 parser.Add("-c", "--config", "Path to JSON config file", defaultValue: "config.json");
 
 var parsed = parser.Parse(args);
@@ -12,6 +12,7 @@ var config = ConfigParser.FromFile(configPath, ClientConfigJsonContext.Default.C
 
 ClientBootstrap.ResolvePaths(config, configPath);
 Logger.Configure(config.Log);
+Logger.Get<ClientApplication>().Info("Client {Version}", BuildInfo.Version);
 
 using var cts = new CancellationTokenSource();
 Console.CancelKeyPress += (_, e) => {

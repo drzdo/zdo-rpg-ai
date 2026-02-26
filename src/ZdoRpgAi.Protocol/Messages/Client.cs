@@ -7,8 +7,12 @@ public enum ClientToModMessageType {
     SayMp3File,
 }
 
-public record StartSessionPayload();
+public record StartSessionPayload(string SessionId);
 public record SayMp3FilePayload(string NpcId, string Mp3Name, string Text, double? DurationSec = null);
+
+// Mod → Client
+
+public record StartSessionAckPayload(string SessionId);
 
 // Client → Both (Mod + Server)
 
