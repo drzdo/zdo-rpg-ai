@@ -1,0 +1,32 @@
+using System.Text.Json.Serialization;
+
+namespace ZdoRpgAi.Protocol.Messages;
+
+[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
+[JsonSerializable(typeof(PlayerSpeaksPayload))]
+[JsonSerializable(typeof(PlayerSpeaksAudioPayload))]
+[JsonSerializable(typeof(PlayerStartSpeakPayload))]
+[JsonSerializable(typeof(PlayerStopSpeakPayload))]
+[JsonSerializable(typeof(NpcSpeaksPayload))]
+[JsonSerializable(typeof(GetCharactersWhoHearRequestPayload))]
+[JsonSerializable(typeof(NearbyCharacterInfo))]
+[JsonSerializable(typeof(GetCharactersWhoHearResponsePayload))]
+[JsonSerializable(typeof(GetNpcInfoRequestPayload))]
+[JsonSerializable(typeof(GetNpcInfoResponsePayload))]
+[JsonSerializable(typeof(SpeechRecognitionInProgressPayload))]
+[JsonSerializable(typeof(SpeechRecognitionCompletePayload))]
+[JsonSerializable(typeof(PlayerAddedPayload))]
+[JsonSerializable(typeof(TargetChangedPayload))]
+[JsonSerializable(typeof(CellChangePayload))]
+[JsonSerializable(typeof(GetPlayerInfoRequestPayload))]
+[JsonSerializable(typeof(GetPlayerInfoResponsePayload))]
+[JsonSerializable(typeof(SpawnOnGroundInFrontOfCharacterPayload))]
+[JsonSerializable(typeof(PlaySound3dOnCharacterPayload))]
+[JsonSerializable(typeof(NpcStartFollowCharacterPayload))]
+[JsonSerializable(typeof(NpcStopFollowCharacterPayload))]
+[JsonSerializable(typeof(NpcAttackPayload))]
+[JsonSerializable(typeof(NpcStopAttackPayload))]
+[JsonSerializable(typeof(ShowMessageBoxPayload))]
+[JsonSerializable(typeof(HelloPayload))]
+[JsonSerializable(typeof(SayMp3FilePayload))]
+public partial class PayloadJsonContext : JsonSerializerContext;
