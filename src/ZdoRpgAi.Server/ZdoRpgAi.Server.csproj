@@ -7,8 +7,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="MoonSharp" Version="2.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\ZdoRpgAi.Core\ZdoRpgAi.Core.csproj" />
     <ProjectReference Include="..\ZdoRpgAi.Protocol\ZdoRpgAi.Protocol.csproj" />
+    <ProjectReference Include="..\ZdoRpgAi.Repository\ZdoRpgAi.Repository.csproj" />
   </ItemGroup>
 
 </Project>
