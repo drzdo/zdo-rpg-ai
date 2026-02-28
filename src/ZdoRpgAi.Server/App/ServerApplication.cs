@@ -1,5 +1,4 @@
 using ZdoRpgAi.Core;
-using ZdoRpgAi.Database;
 using ZdoRpgAi.Repository;
 using ZdoRpgAi.Server.Http;
 using ZdoRpgAi.Server.Llm;
@@ -19,13 +18,11 @@ public class ServerApplication : IDisposable {
     private readonly ILlm _llm;
     private readonly LuaSandbox _lua;
     private readonly HttpServer _httpServer;
-    private readonly MainDatabase _mainDb;
-    private readonly SaveGameDatabase _saveGameDb;
 
     public ServerApplication(
         IMainRepository mainRepo, ISaveGameRepository saveGameRepo,
         ITextToSpeech tts, ISpeechToText stt, ILlm llm, LuaSandbox lua,
-        HttpServer httpServer, MainDatabase mainDb, SaveGameDatabase saveGameDb) {
+        HttpServer httpServer) {
         _mainRepo = mainRepo;
         _saveGameRepo = saveGameRepo;
         _tts = tts;
@@ -33,8 +30,6 @@ public class ServerApplication : IDisposable {
         _llm = llm;
         _lua = lua;
         _httpServer = httpServer;
-        _mainDb = mainDb;
-        _saveGameDb = saveGameDb;
     }
 
     public async Task RunAsync(CancellationToken ct) {
@@ -45,7 +40,7 @@ public class ServerApplication : IDisposable {
 
     public void Dispose() {
         (_stt as IDisposable)?.Dispose();
-        _saveGameDb.Dispose();
-        _mainDb.Dispose();
+        _saveGameRepo.Dispose();
+        _mainRepo.Dispose();
     }
 }

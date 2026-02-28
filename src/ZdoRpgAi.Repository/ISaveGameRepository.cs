@@ -1,4 +1,4 @@
 namespace ZdoRpgAi.Repository;
 
-public interface ISaveGameRepository {
+public interface ISaveGameRepository : IDisposable {
 }
