@@ -20,4 +20,6 @@ public static class JsonExtensions {
 
     public static JsonObject SerializeToObject<T>(T value, JsonTypeInfo<T> typeInfo) =>
         (JsonObject)JsonSerializer.SerializeToNode(value, typeInfo)!;
+
+    public static void AddNode(this JsonArray array, JsonNode node) => array.Add(node);
 }

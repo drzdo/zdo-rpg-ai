@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using ZdoRpgAi.Core;
@@ -31,7 +32,10 @@ public class HttpServer {
 
         _app.UseWebSockets();
 
-        _app.MapGet("/ping", () => "pong");
+        _app.Map("/ping", context => {
+            context.Response.ContentType = "text/plain";
+            return context.Response.WriteAsync("pong");
+        });
 
         _app.Map("/ws", async context => {
             if (!context.WebSockets.IsWebSocketRequest) {

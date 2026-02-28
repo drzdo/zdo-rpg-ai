@@ -3,6 +3,7 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using ZdoRpgAi.Core;
+using ZdoRpgAi.Protocol.Messages;
 
 namespace ZdoRpgAi.Server.Llm.OpenAi;
 
@@ -56,12 +57,12 @@ public class OpenAiLlm : ILlm {
         var messages = new JsonArray();
 
         var systemText = BuildSystemText(request);
-        messages.Add(new JsonObject { ["role"] = "system", ["content"] = systemText });
+        messages.AddNode(new JsonObject { ["role"] = "system", ["content"] = systemText });
 
         foreach (var msg in request.Messages) {
             if (msg.ToolResults != null) {
                 foreach (var tr in msg.ToolResults) {
-                    messages.Add(new JsonObject {
+                    messages.AddNode(new JsonObject {
                         ["role"] = "tool",
                         ["tool_call_id"] = tr.CallId,
                         ["content"] = tr.Result,
@@ -86,10 +87,10 @@ public class OpenAiLlm : ILlm {
                             args[kv.Key] = JsonNode.Parse(je.GetRawText());
                         }
                         else {
-                            args[kv.Key] = kv.Value != null ? JsonValue.Create(kv.Value) : null;
+                            args[kv.Key] = kv.Value != null ? JsonValue.Create(kv.Value?.ToString()) : null;
                         }
                     }
-                    toolCalls.Add(new JsonObject {
+                    toolCalls.AddNode(new JsonObject {
                         ["id"] = tc.Id,
                         ["type"] = "function",
                         ["function"] = new JsonObject {
@@ -101,7 +102,7 @@ public class OpenAiLlm : ILlm {
                 obj["tool_calls"] = toolCalls;
             }
 
-            messages.Add(obj);
+            messages.AddNode(obj);
         }
 
         return messages;
@@ -143,19 +144,19 @@ public class OpenAiLlm : ILlm {
                     };
                     if (p.EnumValues is { Count: > 0 }) {
                         var enumArr = new JsonArray();
-                        foreach (var v in p.EnumValues) enumArr.Add(v);
+                        foreach (var v in p.EnumValues) enumArr.AddNode(JsonValue.Create(v)!);
                         paramObj["enum"] = enumArr;
                     }
                     props[p.Name] = paramObj;
                     if (p.Required) {
-                        required.Add(p.Name);
+                        required.AddNode(JsonValue.Create(p.Name)!);
                     }
                 }
                 parameters["properties"] = props;
                 parameters["required"] = required;
             }
 
-            arr.Add(new JsonObject {
+            arr.AddNode(new JsonObject {
                 ["type"] = "function",
                 ["function"] = new JsonObject {
                     ["name"] = tool.Name,

@@ -1,5 +1,5 @@
 using System.Collections.Concurrent;
-using MoonSharp.Interpreter;
+using KeraLua;
 using ZdoRpgAi.Core;
 
 namespace ZdoRpgAi.Server.Lua;
@@ -7,15 +7,14 @@ namespace ZdoRpgAi.Server.Lua;
 public class LuaSandbox {
     private static readonly ILog Log = Logger.Get<LuaSandbox>();
 
-    private readonly ConcurrentQueue<Script> _pool = new();
+    private readonly ConcurrentQueue<KeraLua.Lua> _pool = new();
     private readonly int _poolSize;
     private readonly SemaphoreSlim _multiLock = new(1, 1);
 
     public LuaSandbox() {
-        UserData.RegisterType<LuaContext>();
         _poolSize = Environment.ProcessorCount;
         for (var i = 0; i < _poolSize; i++) {
-            _pool.Enqueue(new Script(CoreModules.Preset_HardSandbox));
+            _pool.Enqueue(CreateState());
         }
     }
 
@@ -36,32 +35,55 @@ public class LuaSandbox {
             conditions,
             new ParallelOptions { MaxDegreeOfParallelism = _poolSize },
             () => {
-                _pool.TryDequeue(out var script);
-                ApplyContext(script!, ctx);
-                return script!;
+                _pool.TryDequeue(out var state);
+                return state!;
             },
-            (kvp, _, script) => {
+            (kvp, _, state) => {
+                ApplyContext(state, ctx);
                 try {
-                    var result = script.DoString($"return ({kvp.Value})");
-                    if (result.Type == DataType.Boolean && result.Boolean) {
+                    var status = state.LoadString($"return ({kvp.Value})");
+                    if (status != LuaStatus.OK) {
+                        Log.Error("Lua syntax error for {Id}: {Error}", kvp.Key, state.ToString(-1));
+                        state.Pop(1);
+                        return state;
+                    }
+                    status = state.PCall(0, 1, 0);
+                    if (status != LuaStatus.OK) {
+                        Log.Error("Lua runtime error for {Id}: {Error}", kvp.Key, state.ToString(-1));
+                        state.Pop(1);
+                        return state;
+                    }
+                    if (state.IsBoolean(-1) && state.ToBoolean(-1)) {
                         passed.Add(kvp.Key);
                     }
+                    state.Pop(1);
                 }
                 catch (Exception ex) {
                     Log.Error("Lua condition error for {Id} ({Script}): {Error}", kvp.Key, kvp.Value, ex.Message);
                 }
-                return script;
+                return state;
             },
-            script => _pool.Enqueue(script));
+            state => _pool.Enqueue(state));
 
         return passed.ToList();
     }
 
     public bool EvalCondition(string luaCode, LuaContext ctx) {
         try {
-            var script = CreateScript(ctx);
-            var result = script.DoString($"return ({luaCode})");
-            return result.Type == DataType.Boolean && result.Boolean;
+            using var state = CreateState();
+            ApplyContext(state, ctx);
+            var status = state.LoadString($"return ({luaCode})");
+            if (status != LuaStatus.OK) {
+                Log.Error("Lua syntax error: {Error}", state.ToString(-1));
+                return false;
+            }
+            status = state.PCall(0, 1, 0);
+            if (status != LuaStatus.OK) {
+                Log.Error("Lua runtime error: {Error}", state.ToString(-1));
+                return false;
+            }
+            var result = state.IsBoolean(-1) && state.ToBoolean(-1);
+            return result;
         }
         catch (Exception ex) {
             Log.Error("Lua condition error: {Error}", ex.Message);
@@ -71,26 +93,31 @@ public class LuaSandbox {
 
     public string? EvalContent(string luaCode, LuaContext ctx, Dictionary<string, object>? extraVars = null) {
         try {
-            var script = CreateScript(ctx);
+            using var state = CreateState();
+            ApplyContext(state, ctx);
             if (extraVars is { Count: > 0 }) {
                 foreach (var (key, value) in extraVars) {
-                    script.Globals[key] = value switch {
-                        string s => DynValue.NewString(s),
-                        double d => DynValue.NewNumber(d),
-                        int i => DynValue.NewNumber(i),
-                        long l => DynValue.NewNumber(l),
-                        bool b => DynValue.NewBoolean(b),
-                        _ => DynValue.NewString(value.ToString() ?? ""),
-                    };
+                    PushValue(state, value);
+                    state.SetGlobal(key);
                 }
             }
-            var result = script.DoString(luaCode);
-            if (result.IsNil() || result.IsVoid()) {
+            var status = state.LoadString(luaCode);
+            if (status != LuaStatus.OK) {
+                var err = state.ToString(-1);
+                state.Pop(1);
+                throw new LuaException(err ?? "Syntax error");
+            }
+            status = state.PCall(0, 1, 0);
+            if (status != LuaStatus.OK) {
+                Log.Error("Lua runtime error: {Error}", state.ToString(-1));
                 return null;
             }
-            return result.Type == DataType.String ? result.String : result.ToPrintString();
+            if (state.IsNil(-1) || state.IsNone(-1)) {
+                return null;
+            }
+            return state.ToString(-1);
         }
-        catch (SyntaxErrorException) {
+        catch (LuaException) {
             throw;
         }
         catch (Exception ex) {
@@ -101,36 +128,87 @@ public class LuaSandbox {
 
     public void ExecAction(string luaCode, LuaContext ctx, Dictionary<string, object?>? args = null) {
         try {
-            var script = CreateScript(ctx);
+            using var state = CreateState();
+            ApplyContext(state, ctx);
             if (args is { Count: > 0 }) {
-                var table = new Table(script);
+                state.NewTable();
                 foreach (var (key, value) in args) {
-                    table[key] = value switch {
-                        string s => DynValue.NewString(s),
-                        double d => DynValue.NewNumber(d),
-                        int i => DynValue.NewNumber(i),
-                        long l => DynValue.NewNumber(l),
-                        bool b => DynValue.NewBoolean(b),
-                        null => DynValue.Nil,
-                        _ => DynValue.NewString(value.ToString() ?? ""),
-                    };
+                    state.PushString(key);
+                    PushValue(state, value);
+                    state.SetTable(-3);
                 }
-                script.Globals["args"] = table;
+                state.SetGlobal("args");
             }
-            script.DoString(luaCode);
+            var status = state.LoadString(luaCode);
+            if (status != LuaStatus.OK) {
+                Log.Error("Lua syntax error: {Error}", state.ToString(-1));
+                return;
+            }
+            status = state.PCall(0, 0, 0);
+            if (status != LuaStatus.OK) {
+                Log.Error("Lua runtime error: {Error}", state.ToString(-1));
+            }
         }
         catch (Exception ex) {
             Log.Error("Lua action error: {Error}", ex.Message);
         }
     }
 
-    private Script CreateScript(LuaContext ctx) {
-        var script = new Script(CoreModules.Preset_HardSandbox);
-        ApplyContext(script, ctx);
-        return script;
+    private static KeraLua.Lua CreateState() {
+        var state = new KeraLua.Lua();
+        state.OpenLibs();
+        // Remove dangerous libs for sandboxing
+        state.PushNil();
+        state.SetGlobal("os");
+        state.PushNil();
+        state.SetGlobal("io");
+        state.PushNil();
+        state.SetGlobal("loadfile");
+        state.PushNil();
+        state.SetGlobal("dofile");
+        state.PushNil();
+        state.SetGlobal("require");
+        return state;
     }
 
-    private static void ApplyContext(Script script, LuaContext ctx) {
-        script.Globals["ctx"] = UserData.Create(ctx);
+    private static void ApplyContext(KeraLua.Lua state, LuaContext ctx) {
+        state.NewTable();
+        state.PushString("npcId");
+        state.PushString(ctx.NpcId);
+        state.SetTable(-3);
+        state.PushString("playerId");
+        state.PushString(ctx.PlayerId);
+        state.SetTable(-3);
+        state.SetGlobal("ctx");
     }
+
+    private static void PushValue(KeraLua.Lua state, object? value) {
+        switch (value) {
+            case null:
+                state.PushNil();
+                break;
+            case string s:
+                state.PushString(s);
+                break;
+            case double d:
+                state.PushNumber(d);
+                break;
+            case int i:
+                state.PushNumber(i);
+                break;
+            case long l:
+                state.PushNumber(l);
+                break;
+            case bool b:
+                state.PushBoolean(b);
+                break;
+            default:
+                state.PushString(value.ToString() ?? "");
+                break;
+        }
+    }
+}
+
+public class LuaException : Exception {
+    public LuaException(string message) : base(message) { }
 }

@@ -3,6 +3,7 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using ZdoRpgAi.Core;
+using ZdoRpgAi.Protocol.Messages;
 
 namespace ZdoRpgAi.Server.Llm.Gemini;
 
@@ -27,7 +28,7 @@ public class GeminiLlm : ILlm {
         var systemText = BuildSystemText(request);
         var body = new JsonObject {
             ["systemInstruction"] = new JsonObject {
-                ["parts"] = new JsonArray { new JsonObject { ["text"] = systemText } }
+                ["parts"] = new JsonArray { (JsonNode)new JsonObject { ["text"] = systemText } }
             },
             ["contents"] = BuildContents(request.Messages),
         };
@@ -89,7 +90,7 @@ public class GeminiLlm : ILlm {
             var parts = new JsonArray();
 
             if (msg.Text != null) {
-                parts.Add(new JsonObject { ["text"] = msg.Text });
+                parts.AddNode(new JsonObject { ["text"] = msg.Text });
             }
 
             if (msg.ToolCalls != null) {
@@ -100,10 +101,10 @@ public class GeminiLlm : ILlm {
                             args[kv.Key] = JsonNode.Parse(je.GetRawText());
                         }
                         else {
-                            args[kv.Key] = kv.Value != null ? JsonValue.Create(kv.Value) : null;
+                            args[kv.Key] = kv.Value != null ? JsonValue.Create(kv.Value?.ToString()) : null;
                         }
                     }
-                    parts.Add(new JsonObject {
+                    parts.AddNode(new JsonObject {
                         ["functionCall"] = new JsonObject { ["name"] = tc.Name, ["args"] = args }
                     });
                 }
@@ -111,7 +112,7 @@ public class GeminiLlm : ILlm {
 
             if (msg.ToolResults != null) {
                 foreach (var tr in msg.ToolResults) {
-                    parts.Add(new JsonObject {
+                    parts.AddNode(new JsonObject {
                         ["functionResponse"] = new JsonObject {
                             ["name"] = tr.Name,
                             ["response"] = new JsonObject { ["result"] = tr.Result }
@@ -121,7 +122,7 @@ public class GeminiLlm : ILlm {
             }
 
             var role = msg.Role == LlmRole.User ? "user" : "model";
-            contents.Add(new JsonObject { ["role"] = role, ["parts"] = parts });
+            contents.AddNode(new JsonObject { ["role"] = role, ["parts"] = parts });
         }
         return contents;
     }
@@ -144,12 +145,12 @@ public class GeminiLlm : ILlm {
                     };
                     if (p.EnumValues is { Count: > 0 }) {
                         var enumArr = new JsonArray();
-                        foreach (var v in p.EnumValues) enumArr.Add(v);
+                        foreach (var v in p.EnumValues) enumArr.AddNode(JsonValue.Create(v)!);
                         paramObj["enum"] = enumArr;
                     }
                     props[p.Name] = paramObj;
                     if (p.Required) {
-                        required.Add(p.Name);
+                        required.AddNode(JsonValue.Create(p.Name)!);
                     }
                 }
                 decl["parameters"] = new JsonObject {
@@ -159,9 +160,9 @@ public class GeminiLlm : ILlm {
                 };
             }
 
-            funcDecls.Add(decl);
+            funcDecls.AddNode(decl);
         }
-        return new JsonArray { new JsonObject { ["functionDeclarations"] = funcDecls } };
+        return new JsonArray { (JsonNode)new JsonObject { ["functionDeclarations"] = funcDecls } };
     }
 
     private static string ToJson(JsonObject body) {

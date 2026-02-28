@@ -27,7 +27,7 @@ public class StoryComposer {
 
     public void OnPlayerSpeak(string playerId, string? targetCharacterId, string gameTime, string text) {
         var evt = StoryEvent.Create(new StoryEvent.PlayerSpeak {
-            PlayerId = playerId,
+            PlayerCharacterId = playerId,
             TargetCharacterId = targetCharacterId,
             GameTime = gameTime,
             Text = text,
