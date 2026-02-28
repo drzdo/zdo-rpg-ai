@@ -38,10 +38,14 @@ stt:
   #   language: en
   #   model: nova-2
 
-# LLM (dummy | gemini)
+# LLM (dummy | gemini | openai)
 llm:
   provider: dummy
   # gemini:
   #   apiKey: ""
   #   model: gemini-2.5-flash
   #   thinkingBudget: 0
+  # openAi:
+  #   apiKey: ""
+  #   model: gpt-4o
+  #   baseUrl: https://api.openai.com

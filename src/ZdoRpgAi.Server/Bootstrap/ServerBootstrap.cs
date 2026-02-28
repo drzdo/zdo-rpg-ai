@@ -5,6 +5,7 @@ using ZdoRpgAi.Server.Http;
 using ZdoRpgAi.Server.Llm;
 using ZdoRpgAi.Server.Llm.Dummy;
 using ZdoRpgAi.Server.Llm.Gemini;
+using ZdoRpgAi.Server.Llm.OpenAi;
 using ZdoRpgAi.Server.Lua;
 using ZdoRpgAi.Server.SpeechToText;
 using ZdoRpgAi.Server.SpeechToText.Deepgram;
@@ -64,6 +65,8 @@ public static class ServerBootstrap {
         "dummy" => new DummyLlm(),
         "gemini" => new GeminiLlm(config.Gemini
             ?? throw new InvalidOperationException("llm.gemini config is required when provider is 'gemini'")),
+        "openai" => new OpenAiLlm(config.OpenAi
+            ?? throw new InvalidOperationException("llm.openAi config is required when provider is 'openai'")),
         _ => throw new InvalidOperationException($"Unknown LLM provider: {config.Provider}"),
     };
     }

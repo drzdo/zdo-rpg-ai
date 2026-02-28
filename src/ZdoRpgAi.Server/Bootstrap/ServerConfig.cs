@@ -1,5 +1,6 @@
 using ZdoRpgAi.Core;
 using ZdoRpgAi.Server.Llm.Gemini;
+using ZdoRpgAi.Server.Llm.OpenAi;
 using ZdoRpgAi.Server.SpeechToText.Deepgram;
 using ZdoRpgAi.Server.TextToSpeech.ElevenLabs;
 
@@ -40,4 +41,5 @@ public class SttSection {
 public class LlmSection {
     public required string Provider { get; set; }
     public GeminiConfig? Gemini { get; set; }
+    public OpenAiConfig? OpenAi { get; set; }
 }
