@@ -13,6 +13,12 @@ public class ServerConfig {
     public required TtsSection Tts { get; set; }
     public required SttSection Stt { get; set; }
     public required LlmSection Llm { get; set; }
+    public DirectorSection Director { get; set; } = new();
+}
+
+public class DirectorSection {
+    public int CompactThreshold { get; set; } = 30;
+    public int CompactKeepRecent { get; set; } = 10;
 }
 
 public class DatabaseSection {

@@ -13,7 +13,7 @@ public abstract record StoryEvent {
     public static T Create<T>(T evt) where T : StoryEvent =>
         evt with { RealTime = GetRealTime() };
 
-    private static string GetRealTime() =>
+    internal static string GetRealTime() =>
         DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ");
 
     public sealed record PlayerSpeak : StoryEvent {

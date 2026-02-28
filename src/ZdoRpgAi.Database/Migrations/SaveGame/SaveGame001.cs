@@ -26,27 +26,34 @@ public class SaveGame001 : IMigration {
             PRIMARY KEY (npcId, attributeId)
         );
 
-        CREATE TABLE conversation_entry (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            speakerCharacterId TEXT NOT NULL,
-            targetCharacterId TEXT,
-            createdAtGameTime TEXT NOT NULL,
-            createdAtRealTime TEXT NOT NULL,
-            type TEXT NOT NULL,
-            dataJson TEXT NOT NULL
-        );
-
-        CREATE TABLE conversation_entry_listener (
-            entryId INTEGER NOT NULL,
-            listenerCharacterId TEXT NOT NULL
-        );
-
         CREATE TABLE story_event (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             gameTime TEXT NOT NULL,
             realTime TEXT NOT NULL,
             type TEXT NOT NULL,
-            dataJson TEXT NOT NULL
+            dataJson TEXT NOT NULL,
+            archivedTo INTEGER
         );
+        CREATE INDEX idx_story_event_archived ON story_event(archivedTo);
+
+        CREATE TABLE story_event_observer (
+            storyEventId INTEGER NOT NULL,
+            characterId TEXT NOT NULL
+        );
+        CREATE INDEX idx_story_event_observer_character ON story_event_observer(characterId);
+
+        CREATE TABLE story_event_summary (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            summary TEXT NOT NULL,
+            realTime TEXT NOT NULL,
+            archivedTo INTEGER
+        );
+        CREATE INDEX idx_story_event_summary_archived ON story_event_summary(archivedTo);
+
+        CREATE TABLE story_event_summary_observer (
+            summaryId INTEGER NOT NULL,
+            characterId TEXT NOT NULL
+        );
+        CREATE INDEX idx_story_event_summary_observer_character ON story_event_summary_observer(characterId);
         """;
 }

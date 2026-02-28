@@ -29,7 +29,7 @@ public enum ServerToModMessageType {
 public record NpcSpeaksPayload(string NpcId, string Text);
 public record SpeechRecognitionInProgressPayload(string PlayerId, string Text);
 public record SpeechRecognitionCompletePayload(string PlayerId, string Text);
-public record GetCharactersWhoHearRequestPayload(string CharacterId);
+public record GetCharactersWhoHearRequestPayload(string CharacterId, float? MaxDistanceMeters = null);
 public record GetNpcInfoRequestPayload(string NpcId);
 public record GetNpcInfoResponsePayload(string ObjectId, string Name, string Race, string Sex);
 public record GetPlayerInfoRequestPayload(string PlayerId);

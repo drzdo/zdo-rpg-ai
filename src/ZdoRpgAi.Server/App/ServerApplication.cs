@@ -1,6 +1,7 @@
 using ZdoRpgAi.Core;
 using ZdoRpgAi.Protocol.Rpc;
 using ZdoRpgAi.Repository;
+using ZdoRpgAi.Server.Bootstrap;
 using ZdoRpgAi.Server.Http;
 using ZdoRpgAi.Server.Llm;
 using ZdoRpgAi.Server.Lua;
@@ -23,12 +24,12 @@ public class ServerApplication : IDisposable {
     public ServerApplication(
         IMainRepository mainRepo, ISaveGameRepository saveGameRepo,
         ITextToSpeech tts, ISpeechToText stt, ILlm mainLlm, ILlm simpleLlm, LuaSandbox lua,
-        HttpServer httpServer) {
+        HttpServer httpServer, DirectorSection directorConfig) {
         _mainRepo = mainRepo;
         _saveGameRepo = saveGameRepo;
         _stt = stt;
         _httpServer = httpServer;
-        _game = new Game.GameRunner(mainRepo, saveGameRepo, tts, stt, mainLlm, simpleLlm, lua);
+        _game = new Game.GameRunner(mainRepo, saveGameRepo, tts, stt, mainLlm, simpleLlm, lua, directorConfig);
 
         _httpServer.ClientConnected += OnClientConnected;
     }

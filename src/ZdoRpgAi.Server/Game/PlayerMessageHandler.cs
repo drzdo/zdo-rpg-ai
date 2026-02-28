@@ -2,8 +2,6 @@ using ZdoRpgAi.Core;
 using ZdoRpgAi.Protocol.Channel;
 using ZdoRpgAi.Protocol.Messages;
 using ZdoRpgAi.Protocol.Rpc;
-using ZdoRpgAi.Repository;
-using ZdoRpgAi.Repository.Data;
 using ZdoRpgAi.Server.SpeechToText;
 
 namespace ZdoRpgAi.Server.Game;
@@ -11,15 +9,13 @@ namespace ZdoRpgAi.Server.Game;
 public class PlayerMessageHandler {
     private static readonly ILog Log = Logger.Get<PlayerMessageHandler>();
 
-    private readonly ISaveGameRepository _saveGameRepo;
     private readonly ISpeechToText _stt;
     private IRpcChannel? _client;
     private SpeakingSession? _activeSession;
 
     public event Action<string, string?, string, string>? PlayerSpoke;
 
-    public PlayerMessageHandler(ISaveGameRepository saveGameRepo, ISpeechToText stt) {
-        _saveGameRepo = saveGameRepo;
+    public PlayerMessageHandler(ISpeechToText stt) {
         _stt = stt;
     }
 
@@ -45,7 +41,7 @@ public class PlayerMessageHandler {
     private void OnMessageReceived(Message msg) {
         switch (msg.Type) {
             case nameof(ClientToServerMessageType.PlayerSpeaksText):
-                _ = HandlePlayerSpeaksTextAsync(msg);
+                HandlePlayerSpeaksText(msg);
                 break;
             case nameof(ClientToBothMessageType.PlayerStartSpeak):
                 HandlePlayerStartSpeak(msg);
@@ -144,36 +140,9 @@ public class PlayerMessageHandler {
                 PayloadJsonContext.Default.SpeechRecognitionCompletePayload));
 
         PlayerSpoke?.Invoke(session.PlayerId, session.TargetCharacterId, session.GameTime, text);
-        _ = StoreConversationEntryAsync(client, session, text);
     }
 
-    private async Task StoreConversationEntryAsync(IRpcChannel client, SpeakingSession session, string text) {
-        var response = await client.CallAsync(
-            nameof(ServerToModMessageType.GetCharactersWhoHear),
-            JsonExtensions.SerializeToObject(
-                new GetCharactersWhoHearRequestPayload(session.PlayerId),
-                PayloadJsonContext.Default.GetCharactersWhoHearRequestPayload));
-
-        var hearResponse = response.Json?.DeserializeSafe(PayloadJsonContext.Default.GetCharactersWhoHearResponsePayload);
-        var listeners = hearResponse?.Characters ?? [];
-
-        Log.Info("Player {PlayerId} heard by {Count} characters", session.PlayerId, listeners.Length);
-
-        var listenerIds = listeners
-            .Select(l => l.CharacterId)
-            .Where(id => id != session.PlayerId && id != session.TargetCharacterId)
-            .ToArray();
-
-        _saveGameRepo.AddConversationEntry(
-            session.PlayerId,
-            session.TargetCharacterId,
-            session.GameTime,
-            ConversationEntryType.Speak,
-            new SpeakEntryData(text),
-            listenerIds);
-    }
-
-    private async Task HandlePlayerSpeaksTextAsync(Message msg) {
+    private void HandlePlayerSpeaksText(Message msg) {
         var payload = msg.Json?.DeserializeSafe(PayloadJsonContext.Default.PlayerSpeaksTextPayload);
         if (payload == null) {
             return;
@@ -188,9 +157,6 @@ public class PlayerMessageHandler {
         Log.Info("Player {PlayerId} speaks: {Text}", payload.PlayerId, payload.Text);
 
         PlayerSpoke?.Invoke(payload.PlayerId, payload.TargetCharacterId, payload.GameTime, payload.Text);
-
-        var session = new SpeakingSession(payload.PlayerId, payload.TargetCharacterId, payload.GameTime);
-        await StoreConversationEntryAsync(client, session, payload.Text);
     }
 
     private record SpeakingSession(string PlayerId, string? TargetCharacterId, string GameTime);

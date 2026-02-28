@@ -38,6 +38,11 @@ stt:
   #   language: en
   #   model: nova-2
 
+# Director
+director:
+  compactThreshold: 30
+  compactKeepRecent: 10
+
 # LLM (dummy | gemini | openai)
 llm:
   main:
