@@ -11,6 +11,7 @@ public class ServerConnectionConfig {
     public int MaxMessageSize { get; set; } = 10 * 1024 * 1024;
     public int RpcTimeoutMs { get; set; } = 5000;
     public int ReconnectDelayMs { get; set; } = 2000;
+    public string ClientToken { get; set; } = "";
 }
 
 public class ServerConnection : IDisposable {
@@ -20,6 +21,7 @@ public class ServerConnection : IDisposable {
     private readonly int _maxMessageSize;
     private readonly int _rpcTimeoutMs;
     private readonly int _reconnectDelayMs;
+    private readonly string _clientToken;
     private readonly CancellationTokenSource _cts = new();
 
     public event Action<RpcChannel>? Connected;
@@ -30,6 +32,7 @@ public class ServerConnection : IDisposable {
         _maxMessageSize = config.MaxMessageSize;
         _rpcTimeoutMs = config.RpcTimeoutMs;
         _reconnectDelayMs = config.ReconnectDelayMs;
+        _clientToken = config.ClientToken;
     }
 
     public async Task RunAsync(CancellationToken ct) {
@@ -38,6 +41,8 @@ public class ServerConnection : IDisposable {
             try {
                 Log.Info("Connecting to server at {Uri}", _uri);
                 using var ws = new ClientWebSocket();
+                if (_clientToken.Length > 0)
+                    ws.Options.SetRequestHeader("X-ZdoRpgAi-Client", _clientToken);
                 await ws.ConnectAsync(new Uri(_uri), linked.Token);
                 Log.Info("Connected to server");
 

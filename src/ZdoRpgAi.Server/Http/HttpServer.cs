@@ -15,12 +15,14 @@ public class HttpServer {
     private readonly WebApplication _app;
     private readonly int _maxMessageSize;
     private readonly int _rpcTimeoutMs;
+    private readonly string _clientToken;
 
     public event Action<RpcChannel>? ClientConnected;
 
     public HttpServer(HttpServerSection config) {
         _maxMessageSize = config.MaxMessageSize;
         _rpcTimeoutMs = config.RpcTimeoutMs;
+        _clientToken = config.ClientToken;
 
         var builder = WebApplication.CreateBuilder();
         builder.Logging.ClearProviders();
@@ -34,6 +36,11 @@ public class HttpServer {
         _app.Map("/ws", async context => {
             if (!context.WebSockets.IsWebSocketRequest) {
                 context.Response.StatusCode = 400;
+                return;
+            }
+
+            if (_clientToken.Length > 0 && context.Request.Headers["X-ZdoRpgAi-Client"] != _clientToken) {
+                context.Response.StatusCode = 403;
                 return;
             }
 

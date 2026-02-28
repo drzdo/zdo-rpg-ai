@@ -11,6 +11,7 @@ server:
   maxMessageSize: 10485760
   rpcTimeoutMs: 5000
   reconnectDelayMs: 2000
+  clientToken: ""
 
 # OpenMW mod IPC
 mod:

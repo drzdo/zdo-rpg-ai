@@ -24,6 +24,7 @@ public class HttpServerSection {
     public int Port { get; set; } = 8080;
     public int MaxMessageSize { get; set; } = 10_485_760;
     public int RpcTimeoutMs { get; set; } = 5000;
+    public string ClientToken { get; set; } = "";
 }
 
 public class TtsSection {
