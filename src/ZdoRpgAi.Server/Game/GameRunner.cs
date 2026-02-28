@@ -4,6 +4,7 @@ using ZdoRpgAi.Repository;
 using ZdoRpgAi.Server.Llm;
 using ZdoRpgAi.Server.Lua;
 using ZdoRpgAi.Server.SpeechToText;
+using ZdoRpgAi.Server.Game.Story;
 using ZdoRpgAi.Server.TextToSpeech;
 
 namespace ZdoRpgAi.Server.Game;
@@ -18,6 +19,7 @@ public class GameRunner {
     private readonly ILlm _llm;
     private readonly LuaSandbox _lua;
     private readonly PlayerMessageHandler _playerHandler;
+    private readonly StoryComposer _storyComposer;
 
     public GameRunner(
         IMainRepository mainRepo, ISaveGameRepository saveGameRepo,
@@ -29,12 +31,18 @@ public class GameRunner {
         _llm = llm;
         _lua = lua;
         _playerHandler = new PlayerMessageHandler(saveGameRepo, stt);
+        _storyComposer = new StoryComposer(saveGameRepo);
+        _playerHandler.PlayerSpoke += _storyComposer.OnPlayerSpeak;
     }
 
     public void SetActiveClient(IRpcChannel? rpc) {
-        if (rpc != null)
+        if (rpc != null) {
             _playerHandler.OnClientConnected(rpc);
-        else
+            _storyComposer.OnClientConnected(rpc);
+        }
+        else {
             _playerHandler.OnClientDisconnected();
+            _storyComposer.OnClientDisconnected();
+        }
     }
 }

@@ -40,5 +40,13 @@ public class SaveGame001 : IMigration {
             entryId INTEGER NOT NULL,
             listenerCharacterId TEXT NOT NULL
         );
+
+        CREATE TABLE story_event (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            gameTime TEXT NOT NULL,
+            realTime TEXT NOT NULL,
+            type TEXT NOT NULL,
+            dataJson TEXT NOT NULL
+        );
         """;
 }

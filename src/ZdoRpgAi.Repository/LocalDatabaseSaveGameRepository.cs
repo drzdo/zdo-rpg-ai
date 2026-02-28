@@ -44,6 +44,20 @@ public class LocalDatabaseSaveGameRepository : ISaveGameRepository, IDisposable 
         return entryId;
     }
 
+    public long AddStoryEvent(string gameTime, string realTime, string type, string dataJson) {
+        using var cmd = _db.Connection.CreateCommand();
+        cmd.CommandText = """
+            INSERT INTO story_event (gameTime, realTime, type, dataJson)
+            VALUES ($gameTime, $realTime, $type, $dataJson)
+            RETURNING id
+            """;
+        cmd.Parameters.AddWithValue("$gameTime", gameTime);
+        cmd.Parameters.AddWithValue("$realTime", realTime);
+        cmd.Parameters.AddWithValue("$type", type);
+        cmd.Parameters.AddWithValue("$dataJson", dataJson);
+        return (long)cmd.ExecuteScalar()!;
+    }
+
     public void Dispose() {
         _db.Dispose();
     }

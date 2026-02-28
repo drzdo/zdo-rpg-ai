@@ -16,6 +16,8 @@ public class PlayerMessageHandler {
     private IRpcChannel? _client;
     private SpeakingSession? _activeSession;
 
+    public event Action<string, string?, string, string>? PlayerSpoke;
+
     public PlayerMessageHandler(ISaveGameRepository saveGameRepo, ISpeechToText stt) {
         _saveGameRepo = saveGameRepo;
         _stt = stt;
@@ -137,6 +139,7 @@ public class PlayerMessageHandler {
                 new SpeechRecognitionCompletePayload(session.PlayerId, text),
                 PayloadJsonContext.Default.SpeechRecognitionCompletePayload));
 
+        PlayerSpoke?.Invoke(session.PlayerId, session.TargetCharacterId, session.GameTime, text);
         _ = StoreConversationEntryAsync(client, session, text);
     }
 
@@ -177,6 +180,8 @@ public class PlayerMessageHandler {
         }
 
         Log.Info("Player {PlayerId} speaks: {Text}", payload.PlayerId, payload.Text);
+
+        PlayerSpoke?.Invoke(payload.PlayerId, payload.TargetCharacterId, payload.GameTime, payload.Text);
 
         var session = new SpeakingSession(payload.PlayerId, payload.TargetCharacterId, payload.GameTime);
         await StoreConversationEntryAsync(client, session, payload.Text);
