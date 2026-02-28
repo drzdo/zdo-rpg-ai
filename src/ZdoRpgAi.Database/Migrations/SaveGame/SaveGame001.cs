@@ -5,13 +5,13 @@ namespace ZdoRpgAi.Database.Migrations.SaveGame;
 public class SaveGame001 : IMigration {
     public void Before(SqliteConnection conn) {
         conn.Execute("CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)");
-        conn.Execute("INSERT meta (key, value) VALUES ('dbtype', 'savegame')");
+        conn.Execute("INSERT INTO meta (key, value) VALUES ('dbtype', 'savegame')");
     }
 
     public string GetSql() => """
         CREATE TABLE player (
             id TEXT PRIMARY KEY,
-            dataJson TEXT NOT NULL,
+            dataJson TEXT NOT NULL
         );
 
         CREATE TABLE npc_new (

@@ -17,4 +17,7 @@ public static class JsonExtensions {
             return default;
         }
     }
+
+    public static JsonObject SerializeToObject<T>(T value, JsonTypeInfo<T> typeInfo) =>
+        (JsonObject)JsonSerializer.SerializeToNode(value, typeInfo)!;
 }

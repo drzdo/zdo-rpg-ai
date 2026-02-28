@@ -1,4 +1,3 @@
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using ZdoRpgAi.Core;
 using ZdoRpgAi.Protocol.Channel;
@@ -92,7 +91,7 @@ public class OpenmwModChannel : IChannel {
 
         // Build and write StartSession message directly to outfile
         var payload = new StartSessionPayload(sessionId);
-        var data = JsonSerializer.SerializeToNode(payload, PayloadJsonContext.Default.StartSessionPayload)!.AsObject();
+        var data = JsonExtensions.SerializeToObject(payload, PayloadJsonContext.Default.StartSessionPayload);
         var msg = new Message(nameof(ClientToModMessageType.StartSession), 1, null, data, null);
         var json = msg.ToJson().ToJsonString();
 

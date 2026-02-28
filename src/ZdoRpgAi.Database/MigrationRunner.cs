@@ -58,6 +58,11 @@ public class MigrationRunner {
     }
 
     private static List<string> GetAppliedMigrations(SqliteConnection conn) {
+        using var check = conn.CreateCommand();
+        check.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='meta'";
+        if ((long)check.ExecuteScalar()! == 0)
+            return [];
+
         using var cmd = conn.CreateCommand();
         cmd.CommandText = "SELECT value FROM meta WHERE key = 'applied_migrations'";
         var result = cmd.ExecuteScalar();

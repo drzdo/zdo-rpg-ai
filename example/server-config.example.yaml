@@ -1,0 +1,47 @@
+# Logging configuration
+log:
+  consoleLevel: info
+  fileLevel: info
+  filePath: logs/server.log
+
+# Database paths
+database:
+  mainDbPath: main.db
+  saveGameDbPath: save.db
+
+# HTTP / WebSocket server
+httpServer:
+  host: 0.0.0.0
+  port: 8080
+  maxMessageSize: 10485760
+  rpcTimeoutMs: 5000
+  clientToken: ""
+
+# Text-to-speech (dummy | elevenlabs)
+tts:
+  provider: dummy
+  # elevenLabs:
+  #   apiKey: ""
+  #   model: eleven_multilingual_v2
+  #   stability: 0.75
+  #   similarityBoost: 0.75
+  #   style: 0.2
+  #   useSpeakerBoost: false
+
+# Speech-to-text (dummy | deepgram)
+stt:
+  provider: dummy
+  # deepgram:
+  #   apiKey: ""
+  #   sampleRate: 16000
+  #   encoding: linear16
+  #   language: en
+  #   model: nova-2
+
+# LLM (dummy | gemini)
+llm:
+  provider: dummy
+  # gemini:
+  #   apiKey: ""
+  #   model: gemini-2.5-flash
+  #   thinkingBudget: 0

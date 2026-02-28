@@ -1,5 +1,3 @@
-using System.Text.Json;
-using System.Text.Json.Nodes;
 using ZdoRpgAi.Core;
 using ZdoRpgAi.Protocol.Channel;
 using ZdoRpgAi.Protocol.Messages;
@@ -59,6 +57,20 @@ public class ClientApplication : IDisposable {
             case nameof(ServerToClientMessageType.NpcSpeaksMp3):
                 HandleNpcSpeaksMp3(msg);
                 break;
+            case nameof(ServerToModMessageType.SpeechRecognitionInProgress): {
+                    var p = msg.Json?.DeserializeSafe(PayloadJsonContext.Default.SpeechRecognitionInProgressPayload);
+                    if (p != null)
+                        Log.Debug("Speech recognition interim: '{Text}'", p.Text);
+                    _bridge.SendMessageToMod(msg);
+                    break;
+                }
+            case nameof(ServerToModMessageType.SpeechRecognitionComplete): {
+                    var p = msg.Json?.DeserializeSafe(PayloadJsonContext.Default.SpeechRecognitionCompletePayload);
+                    if (p != null)
+                        Log.Info("Speech recognition final: '{Text}'", p.Text);
+                    _bridge.SendMessageToMod(msg);
+                    break;
+                }
             default:
                 _bridge.SendMessageToMod(msg);
                 break;
@@ -68,7 +80,7 @@ public class ClientApplication : IDisposable {
     private void HandleNpcSpeaksMp3(Message msg) {
         if (msg.Binary == null || msg.Json == null) return;
 
-        var payload = msg.Json.Deserialize(PayloadJsonContext.Default.NpcSpeaksMp3Payload);
+        var payload = msg.Json.DeserializeSafe(PayloadJsonContext.Default.NpcSpeaksMp3Payload);
         if (payload == null) return;
 
         var mp3Name = _mp3.SaveMp3(msg.Binary);
@@ -77,7 +89,7 @@ public class ClientApplication : IDisposable {
 
         var text = _stripDiacritics ? DiacriticsStripper.Strip(payload.Text) : payload.Text;
         var sayPayload = new SayMp3FilePayload(payload.NpcId, mp3Name, text, payload.DurationSec);
-        var data = JsonSerializer.SerializeToNode(sayPayload, PayloadJsonContext.Default.SayMp3FilePayload)!.AsObject();
+        var data = JsonExtensions.SerializeToObject(sayPayload, PayloadJsonContext.Default.SayMp3FilePayload);
         _bridge.SendMessageToMod(new Message(nameof(ClientToModMessageType.SayMp3File), 0, null, data, null));
     }
 
@@ -86,7 +98,7 @@ public class ClientApplication : IDisposable {
 
         switch (msg.Type) {
             case nameof(ModToServerMessageType.PlayerAdded): {
-                    var e = msg.Json?.Deserialize(PayloadJsonContext.Default.PlayerAddedPayload);
+                    var e = msg.Json?.DeserializeSafe(PayloadJsonContext.Default.PlayerAddedPayload);
                     if (e != null) {
                         _localPlayerId = e.PlayerId;
                         Log.Info("Player ID: {PlayerId}", _localPlayerId);
@@ -94,7 +106,7 @@ public class ClientApplication : IDisposable {
                     break;
                 }
             case nameof(ModToServerMessageType.TargetChanged): {
-                    var e = msg.Json?.Deserialize(PayloadJsonContext.Default.TargetChangedPayload);
+                    var e = msg.Json?.DeserializeSafe(PayloadJsonContext.Default.TargetChangedPayload);
                     if (e != null) {
                         _lastTargetNpcId = e.NpcId;
                         if (_lastTargetNpcId != null)
@@ -103,7 +115,7 @@ public class ClientApplication : IDisposable {
                     break;
                 }
             case nameof(ModToServerMessageType.CellChange): {
-                    var e = msg.Json?.Deserialize(PayloadJsonContext.Default.CellChangePayload);
+                    var e = msg.Json?.DeserializeSafe(PayloadJsonContext.Default.CellChangePayload);
                     if (e != null)
                         Log.Info("Cell: {CellName}", e.CellName);
                     break;
@@ -119,7 +131,7 @@ public class ClientApplication : IDisposable {
             _lastTargetNpcId,
             "0"
         );
-        var data = JsonSerializer.SerializeToNode(payload, PayloadJsonContext.Default.PlayerStartSpeakPayload)!.AsObject();
+        var data = JsonExtensions.SerializeToObject(payload, PayloadJsonContext.Default.PlayerStartSpeakPayload);
         _bridge.SendMessageToServer(new Message(nameof(ClientToBothMessageType.PlayerStartSpeak), 0, null, data, null));
         _bridge.SendMessageToMod(new Message(nameof(ClientToBothMessageType.PlayerStartSpeak), 0, null, null, null));
         Log.Info("Mic activated -> PlayerStartSpeak (target={Target})", _lastTargetNpcId ?? "(none)");
@@ -127,7 +139,7 @@ public class ClientApplication : IDisposable {
 
     private void HandleMicDeactivated() {
         var payload = new PlayerStopSpeakPayload(_localPlayerId ?? "player");
-        var data = JsonSerializer.SerializeToNode(payload, PayloadJsonContext.Default.PlayerStopSpeakPayload)!.AsObject();
+        var data = JsonExtensions.SerializeToObject(payload, PayloadJsonContext.Default.PlayerStopSpeakPayload);
         _bridge.SendMessageToServer(new Message(nameof(ClientToBothMessageType.PlayerStopSpeak), 0, null, data, null));
         _bridge.SendMessageToMod(new Message(nameof(ClientToBothMessageType.PlayerStopSpeak), 0, null, null, null));
         Log.Info("Mic deactivated -> PlayerStopSpeak");
@@ -136,7 +148,7 @@ public class ClientApplication : IDisposable {
     private Task HandleMicAudioBufferAsync(byte[] pcmBytes) {
         if (!_bridge.IsServerConnected) return Task.CompletedTask;
         var payload = new PlayerSpeaksAudioPayload(_localPlayerId ?? "player");
-        var data = JsonSerializer.SerializeToNode(payload, PayloadJsonContext.Default.PlayerSpeaksAudioPayload)!.AsObject();
+        var data = JsonExtensions.SerializeToObject(payload, PayloadJsonContext.Default.PlayerSpeaksAudioPayload);
         _bridge.SendMessageToServer(new Message(nameof(ClientToServerMessageType.PlayerSpeaksAudio), 0, null, data, pcmBytes));
         return Task.CompletedTask;
     }

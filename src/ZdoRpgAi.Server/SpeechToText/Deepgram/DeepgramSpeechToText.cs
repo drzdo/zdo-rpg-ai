@@ -51,6 +51,8 @@ public class DeepgramSpeechToText : ISpeechToText {
                 return;
             }
 
+            Log.Debug("Starting Deepgram session (model={Model}, lang={Lang}, rate={Rate})",
+                _model, _language, _sampleRate);
             _accumulatedTranscript = "";
             _pendingBuffers = new List<byte[]>();
             _finishing = false;
@@ -61,29 +63,44 @@ public class DeepgramSpeechToText : ISpeechToText {
 
     public void FeedAudio(ReadOnlyMemory<byte> buffer) {
         lock (_lock) {
-            if (_sessionTask == null) return;
+            if (_sessionTask == null) {
+                Log.Warn("FeedAudio called without active session");
+                return;
+            }
 
             if (_pendingBuffers != null) {
                 _pendingBuffers.Add(buffer.ToArray());
+                Log.Trace("Buffered audio frame ({Bytes} bytes, {Count} pending)",
+                    buffer.Length, _pendingBuffers.Count);
                 return;
             }
         }
 
-        // WebSocket is connected, send directly on fire-and-forget task
         var ws = _ws;
-        if (ws is not { State: WebSocketState.Open }) return;
+        if (ws is not { State: WebSocketState.Open }) {
+            Log.Warn("FeedAudio: WebSocket not open (state={State})", (object?)ws?.State ?? "null");
+            return;
+        }
+        Log.Trace("Sending audio frame ({Bytes} bytes)", buffer.Length);
         _ = SendAudioAsync(ws, buffer);
     }
 
     public void Finish() {
         lock (_lock) {
-            if (_sessionTask == null) return;
+            if (_sessionTask == null) {
+                Log.Warn("Finish called without active session");
+                return;
+            }
             _finishing = true;
         }
 
+        Log.Debug("Finishing Deepgram session, sending CloseStream");
         var ws = _ws;
         if (ws is { State: WebSocketState.Open }) {
             _ = SendCloseStreamAsync(ws);
+        }
+        else {
+            Log.Warn("Finish: WebSocket not open (state={State})", (object?)ws?.State ?? "null");
         }
     }
 
@@ -94,7 +111,7 @@ public class DeepgramSpeechToText : ISpeechToText {
             cts = _sessionCts;
         }
 
-        Log.Debug("Cancelling speech recognition session");
+        Log.Debug("Cancelling Deepgram session");
         cts?.Cancel();
     }
 
@@ -122,10 +139,11 @@ public class DeepgramSpeechToText : ISpeechToText {
                 $"&endpointing=300" +
                 $"&vad_events=true";
 
+            Log.Debug("Connecting to Deepgram WebSocket");
             await ws.ConnectAsync(new Uri(uri), token);
+            Log.Debug("Deepgram WebSocket connected");
             _ws = ws;
 
-            // Flush buffered audio
             List<byte[]> buffered;
             lock (_lock) {
                 buffered = _pendingBuffers!;
@@ -138,15 +156,15 @@ public class DeepgramSpeechToText : ISpeechToText {
 
             Log.Debug("Deepgram session started, flushed {Count} buffered frames", buffered.Count);
 
-            // Receive loop
             await RunReceiveLoopAsync(ws, token);
+            Log.Debug("Deepgram receive loop ended");
         }
         catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested) {
             Log.Error("Speech recognition session exceeded {Timeout}s timeout, auto-cancelling",
                 (int)SessionTimeout.TotalSeconds);
         }
         catch (OperationCanceledException) {
-            // Normal cancellation
+            Log.Debug("Deepgram session cancelled");
         }
         catch (WebSocketException ex) {
             Log.Warn("WebSocket error in STT session: {Error}", ex.Message);
@@ -165,10 +183,16 @@ public class DeepgramSpeechToText : ISpeechToText {
                 _finishing = false;
             }
 
+            Log.Debug("Deepgram session cleanup: wasFinishing={WasFinishing}, transcript='{Transcript}'",
+                wasFinishing, transcript);
             CleanupWebSocket();
 
             if (wasFinishing && !string.IsNullOrEmpty(transcript)) {
+                Log.Debug("Firing FinalResultReceived: '{Transcript}'", transcript);
                 FinalResultReceived?.Invoke(transcript);
+            }
+            else if (wasFinishing) {
+                Log.Warn("Session finished but no transcript accumulated");
             }
         }
     }
@@ -180,15 +204,21 @@ public class DeepgramSpeechToText : ISpeechToText {
             WebSocketReceiveResult result;
             do {
                 result = await ws.ReceiveAsync(buffer, ct);
-                if (result.MessageType == WebSocketMessageType.Close) return;
+                if (result.MessageType == WebSocketMessageType.Close) {
+                    Log.Debug("Deepgram WebSocket received close frame");
+                    return;
+                }
                 ms.Write(buffer, 0, result.Count);
             } while (!result.EndOfMessage);
 
             if (result.MessageType == WebSocketMessageType.Text) {
                 var json = Encoding.UTF8.GetString(ms.GetBuffer(), 0, (int)ms.Length);
+                Log.Trace("Deepgram message: {Json}", json);
                 ProcessMessage(json);
             }
         }
+        Log.Debug("Receive loop exiting: wsState={State}, cancelled={Cancelled}",
+            ws.State, ct.IsCancellationRequested);
     }
 
     private void ProcessMessage(string json) {
@@ -197,7 +227,10 @@ public class DeepgramSpeechToText : ISpeechToText {
             if (node == null) return;
 
             var type = node["type"]?.GetValue<string>();
-            if (type != "Results") return;
+            if (type != "Results") {
+                Log.Trace("Deepgram non-result message: type={Type}", type ?? "null");
+                return;
+            }
 
             var result = node.Deserialize(DeepgramJsonContext.Default.DeepgramResult);
             if (result?.Channel?.Alternatives is not { Length: > 0 }) return;
@@ -207,14 +240,17 @@ public class DeepgramSpeechToText : ISpeechToText {
 
             if (result.IsFinal) {
                 _accumulatedTranscript += " " + transcript;
+                Log.Debug("Deepgram final fragment: '{Transcript}', accumulated: '{Accumulated}'",
+                    transcript, _accumulatedTranscript.Trim());
                 InterimResultReceived?.Invoke(_accumulatedTranscript.Trim());
             }
             else {
+                Log.Debug("Deepgram interim: '{Transcript}'", transcript);
                 InterimResultReceived?.Invoke((_accumulatedTranscript + " " + transcript).Trim());
             }
         }
         catch (Exception ex) {
-            Log.Debug("Error parsing Deepgram message: {Error}", ex.Message);
+            Log.Warn("Error parsing Deepgram message: {Error}", ex.Message);
         }
     }
 
@@ -223,7 +259,9 @@ public class DeepgramSpeechToText : ISpeechToText {
             if (ws.State == WebSocketState.Open)
                 await ws.SendAsync(buffer, WebSocketMessageType.Binary, true, CancellationToken.None);
         }
-        catch (WebSocketException) { }
+        catch (WebSocketException ex) {
+            Log.Warn("SendAudio failed: {Error}", ex.Message);
+        }
     }
 
     private static async Task SendCloseStreamAsync(ClientWebSocket ws) {
@@ -231,9 +269,12 @@ public class DeepgramSpeechToText : ISpeechToText {
             if (ws.State == WebSocketState.Open) {
                 var closeMsg = "{\"type\":\"CloseStream\"}"u8.ToArray();
                 await ws.SendAsync(closeMsg, WebSocketMessageType.Text, true, CancellationToken.None);
+                Log.Debug("CloseStream message sent");
             }
         }
-        catch (WebSocketException) { }
+        catch (WebSocketException ex) {
+            Log.Warn("SendCloseStream failed: {Error}", ex.Message);
+        }
     }
 
     private void CleanupWebSocket() {
@@ -241,6 +282,7 @@ public class DeepgramSpeechToText : ISpeechToText {
         _ws = null;
         if (ws == null) return;
 
+        Log.Trace("Cleaning up WebSocket (state={State})", (object)ws.State);
         try {
             if (ws.State == WebSocketState.Open)
                 ws.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, null, CancellationToken.None)

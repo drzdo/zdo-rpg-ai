@@ -8,6 +8,7 @@
 - **Repository methods**: Accept and return typed model classes, not raw JSON strings. JSON serialization/deserialization is the repository implementation's responsibility.
 - **Enum string values**: When storing or comparing enum values as strings, use `nameof()` (e.g. `nameof(ConversationEntryType.Speak)`) — no lowercasing or manual string literals.
 - **Client config**: YAML format (`example/client-config.example.yaml`). Parsed via YamlDotNet → `System.Text.Json` source generation for AOT compatibility. The `JsonSerializerContext` is at `src/ZdoRpgAi.Client/Bootstrap/ClientConfigJsonContext.cs`. Only the root type (`ClientConfig`) needs `[JsonSerializable]` — nested types are discovered automatically. When changing `ClientConfig` or its nested types, update `example/client-config.example.yaml` to match.
+- **Server config**: YAML format (`example/server-config.example.yaml`). Config classes at `src/ZdoRpgAi.Server/Bootstrap/ServerConfig.cs`. `JsonSerializerContext` at `src/ZdoRpgAi.Server.Console/ServerConfigJsonContext.cs`. When changing `ServerConfig` or its nested types, update `example/server-config.example.yaml` to match.
 
 # RPC / Message Communication
 
@@ -30,5 +31,5 @@ Messages flow between three parties: **Server**, **Client**, and **Mod** (OpenMW
 
 - **One-way (fire-and-forget):** `rpc.Publish(type, payload)` — no response expected.
 - **Request-response:** `rpc.CallAsync(type, payload)` — awaits a response. The other side uses `rpc.Respond(type, responseTo, payload)`.
-- **Serialization:** Use `JsonSerializer.SerializeToNode(payload, PayloadJsonContext.Default.PayloadType) as JsonObject` to create payloads. Use `msg.Json?.DeserializeSafe(PayloadJsonContext.Default.PayloadType)` to read them — this logs an error on failure instead of silently returning null.
+- **Serialization:** Use `JsonExtensions.SerializeToObject(payload, PayloadJsonContext.Default.PayloadType)` to create payloads. Use `msg.Json?.DeserializeSafe(PayloadJsonContext.Default.PayloadType)` to read them — this logs an error on failure instead of silently returning null.
 - **Message routing:** Match on `msg.Type` using `nameof(MessageTypeEnum.Value)`.

@@ -7,7 +7,7 @@ log:
 # Server connection
 server:
   host: localhost
-  port: 5000
+  port: 8080
   maxMessageSize: 10485760
   rpcTimeoutMs: 5000
   reconnectDelayMs: 2000

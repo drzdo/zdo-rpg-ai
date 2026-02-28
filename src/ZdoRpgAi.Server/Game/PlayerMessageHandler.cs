@@ -1,5 +1,3 @@
-using System.Text.Json;
-using System.Text.Json.Nodes;
 using ZdoRpgAi.Core;
 using ZdoRpgAi.Protocol.Channel;
 using ZdoRpgAi.Protocol.Messages;
@@ -117,10 +115,9 @@ public class PlayerMessageHandler {
         Log.Debug("Interim recognition for {PlayerId}: {Text}", session.PlayerId, text);
         client.Publish(
             nameof(ServerToModMessageType.SpeechRecognitionInProgress),
-            JsonSerializer.SerializeToNode(
+            JsonExtensions.SerializeToObject(
                 new SpeechRecognitionInProgressPayload(session.PlayerId, text),
-                PayloadJsonContext.Default.SpeechRecognitionInProgressPayload
-            ) as JsonObject);
+                PayloadJsonContext.Default.SpeechRecognitionInProgressPayload));
     }
 
     private void OnFinalResultReceived(string text) {
@@ -136,10 +133,9 @@ public class PlayerMessageHandler {
         Log.Info("Final recognition for {PlayerId}: {Text}", session.PlayerId, text);
         client.Publish(
             nameof(ServerToModMessageType.SpeechRecognitionComplete),
-            JsonSerializer.SerializeToNode(
+            JsonExtensions.SerializeToObject(
                 new SpeechRecognitionCompletePayload(session.PlayerId, text),
-                PayloadJsonContext.Default.SpeechRecognitionCompletePayload
-            ) as JsonObject);
+                PayloadJsonContext.Default.SpeechRecognitionCompletePayload));
 
         _ = StoreConversationEntryAsync(client, session, text);
     }
@@ -147,10 +143,9 @@ public class PlayerMessageHandler {
     private async Task StoreConversationEntryAsync(IRpcChannel client, SpeakingSession session, string text) {
         var response = await client.CallAsync(
             nameof(ServerToModMessageType.GetCharactersWhoHear),
-            JsonSerializer.SerializeToNode(
+            JsonExtensions.SerializeToObject(
                 new GetCharactersWhoHearRequestPayload(session.PlayerId),
-                PayloadJsonContext.Default.GetCharactersWhoHearRequestPayload
-            ) as JsonObject);
+                PayloadJsonContext.Default.GetCharactersWhoHearRequestPayload));
 
         var hearResponse = response.Json?.DeserializeSafe(PayloadJsonContext.Default.GetCharactersWhoHearResponsePayload);
         var listeners = hearResponse?.Characters ?? [];

@@ -7,16 +7,16 @@ namespace ZdoRpgAi.Server.Bootstrap;
 
 public class ServerConfig {
     public LogConfig Log { get; set; } = new();
-    public DatabaseSection Database { get; set; } = new();
+    public required DatabaseSection Database { get; set; }
     public HttpServerSection HttpServer { get; set; } = new();
-    public TtsSection Tts { get; set; } = new();
-    public SttSection Stt { get; set; } = new();
-    public LlmSection Llm { get; set; } = new();
+    public required TtsSection Tts { get; set; }
+    public required SttSection Stt { get; set; }
+    public required LlmSection Llm { get; set; }
 }
 
 public class DatabaseSection {
-    public string MainDbPath { get; set; } = "main.db";
-    public string SaveGameDbPath { get; set; } = "save.db";
+    public required string MainDbPath { get; set; }
+    public required string SaveGameDbPath { get; set; }
 }
 
 public class HttpServerSection {
@@ -28,16 +28,16 @@ public class HttpServerSection {
 }
 
 public class TtsSection {
-    public string Provider { get; set; } = "elevenlabs";
+    public required string Provider { get; set; }
     public ElevenLabsConfig? ElevenLabs { get; set; }
 }
 
 public class SttSection {
-    public string Provider { get; set; } = "deepgram";
+    public required string Provider { get; set; }
     public DeepgramConfig? Deepgram { get; set; }
 }
 
 public class LlmSection {
-    public string Provider { get; set; } = "gemini";
+    public required string Provider { get; set; }
     public GeminiConfig? Gemini { get; set; }
 }
