@@ -9,4 +9,6 @@ public interface IRpcChannel {
     Task<Message> CallAsync(string type, JsonObject? payload = null, int? timeoutMs = null);
     event Action<Message>? MessageReceived;
     event Action? Disconnected;
+
+    Task RunAsync();
 }

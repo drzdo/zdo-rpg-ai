@@ -56,9 +56,16 @@ public class WebSocketChannel : IChannel {
         catch (Exception ex) when (ex is WebSocketException or OperationCanceledException) {
             Log.Warn("Send failed: {Error}", ex.Message);
         }
+        catch (Exception ex) {
+            Log.Error("Send error: {Error}", ex.ToString());
+        }
     }
 
     public async Task RunAsync() {
+        await Task.CompletedTask;
+    }
+
+    public async Task RunWebSocketAsync() {
         var buffer = new byte[_maxMessageSize];
         try {
             while (_socket.State == WebSocketState.Open) {

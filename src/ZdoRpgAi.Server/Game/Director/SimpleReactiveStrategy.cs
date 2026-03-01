@@ -25,16 +25,20 @@ public class SimpleReactiveStrategy : IDirectorStrategy {
     }
 
     public async Task<List<StoryEvent>> ProcessStoryEventsAsync(List<StoryEvent> events) {
+        Log.Trace("Processing {Count} events", events.Count);
 
         var playerIds = events.OfType<StoryEvent.PlayerSpeak>()
             .Select(ps => ps.PlayerCharacterId)
             .ToHashSet();
+        Log.Trace("Found {Count} player IDs: {Ids}", playerIds.Count, string.Join(", ", playerIds));
 
         var (npcId, gameTime) = await FindLastTargetedNpcAsync(_rpc, events, playerIds);
         if (npcId == null) {
             Log.Debug("No target NPC found in events");
             return [];
         }
+
+        Log.Trace("Target NPC: {NpcId}, game time: {GameTime}", npcId, gameTime);
 
         try {
             var npcInfo = await _npcRepo.GetNpcInfoAsync(npcId);
@@ -43,13 +47,16 @@ public class SimpleReactiveStrategy : IDirectorStrategy {
                 return [];
             }
 
+            Log.Trace("NPC info: {Name} ({Race} {Sex})", npcInfo.Name, npcInfo.Race, npcInfo.Sex);
             var (history, summaries) = await _story.GetHistoryForCharacterAsync(npcId);
+            Log.Trace("History: {HistoryCount} events, {SummaryCount} summaries", history.Count, summaries.Count);
             var response = await GenerateNpcResponseAsync(npcInfo, history, summaries);
             if (response == null) {
                 Log.Warn("LLM returned no response for NPC {NpcId}", npcId);
                 return [];
             }
 
+            Log.Trace("Generated response for NPC {NpcId}: {ResponseLength} chars", npcId, response.Length);
             var npcSpeak = StoryEvent.Create(new StoryEvent.NpcSpeak {
                 NpcCharacterId = npcId,
                 TargetCharacterId = playerIds.FirstOrDefault(),
@@ -66,9 +73,11 @@ public class SimpleReactiveStrategy : IDirectorStrategy {
 
     private async Task<(string? NpcId, string? GameTime)> FindLastTargetedNpcAsync(
         IRpcChannel rpc, List<StoryEvent> events, HashSet<string> playerIds) {
+        Log.Trace("Finding last targeted NPC from {Count} events", events.Count);
         for (var i = events.Count - 1; i >= 0; i--) {
             switch (events[i]) {
                 case StoryEvent.PlayerSpeak ps:
+                    Log.Trace("Checking PlayerSpeak event, explicit target: {Target}", ps.TargetCharacterId ?? "none");
                     var npcId = ps.TargetCharacterId ?? await DetermineTargetNpcAsync(rpc, ps);
                     if (npcId != null) {
                         return (npcId, ps.GameTime);
@@ -76,6 +85,7 @@ public class SimpleReactiveStrategy : IDirectorStrategy {
 
                     break;
                 case StoryEvent.NpcSpeak ns when ns.TargetCharacterId != null && !playerIds.Contains(ns.TargetCharacterId):
+                    Log.Trace("Found NpcSpeak targeting non-player: {Target}", ns.TargetCharacterId);
                     return (ns.TargetCharacterId, ns.GameTime);
             }
         }
@@ -83,6 +93,7 @@ public class SimpleReactiveStrategy : IDirectorStrategy {
     }
 
     private async Task<string?> DetermineTargetNpcAsync(IRpcChannel rpc, StoryEvent.PlayerSpeak evt) {
+        Log.Trace("Determining target NPC for player {PlayerId}", evt.PlayerCharacterId);
         var hearResponse = await rpc.CallAsync(
             nameof(ServerToModMessageType.GetCharactersWhoHear),
             JsonExtensions.SerializeToObject(
@@ -95,12 +106,14 @@ public class SimpleReactiveStrategy : IDirectorStrategy {
             .OrderBy(c => c.DistanceMeters)
             .ToArray() ?? [];
 
+        Log.Trace("Found {Count} nearby characters", nearby.Length);
         if (nearby.Length == 0) {
             Log.Debug("No nearby NPCs to respond");
             return null;
         }
 
         if (nearby.Length == 1) {
+            Log.Trace("Single nearby NPC: {NpcId}", nearby[0].CharacterId);
             return nearby[0].CharacterId;
         }
 
@@ -112,17 +125,20 @@ public class SimpleReactiveStrategy : IDirectorStrategy {
             }
         }
 
+        Log.Trace("Resolved {Count} NPC infos out of {Total} nearby", npcInfos.Count, nearby.Length);
         if (npcInfos.Count == 0) {
             return null;
         }
 
         if (npcInfos.Count == 1) {
+            Log.Trace("Single NPC with info: {NpcId}", npcInfos[0].Id);
             return npcInfos[0].Id;
         }
 
         var npcList = string.Join("\n", npcInfos.Select((n, i) =>
             $"- {n.Id}: {n.Info.Name} ({n.Info.Race} {n.Info.Sex}), distance: {nearby.First(c => c.CharacterId == n.Id).DistanceMeters:F1} meters"));
 
+        Log.Trace("Asking simple LLM to choose among {Count} NPCs", npcInfos.Count);
         var request = new LlmRequest {
             SystemPrompt = "You are deciding which NPC a player is talking to. " +
                            "Respond with ONLY the character ID of the most likely target. " +
@@ -151,6 +167,8 @@ public class SimpleReactiveStrategy : IDirectorStrategy {
     private async Task<string?> GenerateNpcResponseAsync(
         NpcInfo npc,
         List<StoryEvent> history, List<StoryEventSummary> summaries) {
+        Log.Trace("Generating response for NPC {NpcName} with {HistoryCount} history events and {SummaryCount} summaries",
+            npc.Name, history.Count, summaries.Count);
 
         var contextBlock = BuildContextBlock(summaries, history);
 
@@ -199,7 +217,9 @@ public class SimpleReactiveStrategy : IDirectorStrategy {
             Messages = messages,
         };
 
+        Log.Trace("Calling main LLM with {MessageCount} messages", messages.Count);
         var response = await _mainLlm.ChatAsync(request);
+        Log.Trace("Main LLM response length: {Length}", response.Text?.Length ?? 0);
         return response.Text?.Trim();
     }
 

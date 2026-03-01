@@ -17,6 +17,7 @@ public class HttpServer {
     private readonly int _maxMessageSize;
     private readonly int _rpcTimeoutMs;
     private readonly string _clientToken;
+    private readonly List<IChannel> _activeChannels = new();
 
     public event Action<IChannel>? ClientConnected;
 
@@ -51,15 +52,31 @@ public class HttpServer {
             var socket = await context.WebSockets.AcceptWebSocketAsync();
             var channel = new WebSocketChannel(socket, _maxMessageSize);
 
+            lock (_activeChannels) {
+                _activeChannels.Add(channel);
+            }
+
             Log.Info("Client connected");
             ClientConnected?.Invoke(channel);
 
-            await channel.RunAsync();
+            await channel.RunWebSocketAsync();
+
+            lock (_activeChannels) {
+                _activeChannels.Remove(channel);
+            }
+
             Log.Info("Client disconnected");
         });
     }
 
     public async Task StartAsync(CancellationToken ct = default) {
+        ct.Register(() => {
+            lock (_activeChannels) {
+                foreach (var channel in _activeChannels) {
+                    channel.Close();
+                }
+            }
+        });
         await _app.RunAsync(ct);
     }
 }

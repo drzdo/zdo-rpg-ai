@@ -12,7 +12,7 @@ public record Message(string Type, int Id, int? ResponseTo, JsonObject? Json, by
         }
 
         if (Json != null) {
-            obj["data"] = Json;
+            obj["data"] = Json.DeepClone();
         }
 
         return obj;

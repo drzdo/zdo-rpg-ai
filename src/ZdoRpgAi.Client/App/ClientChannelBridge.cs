@@ -75,6 +75,8 @@ public class ClientChannelBridge : IDisposable {
                     msg.ResponseTo.Value, msg.Type);
                 return;
             }
+
+            Log.Trace($"ServerRpc.Respond type={msg.Type} id={msg.Id} originalServerId={originalServerId}");
             _serverRpc.Respond(msg.Type, originalServerId, msg.Json);
         }
         else {

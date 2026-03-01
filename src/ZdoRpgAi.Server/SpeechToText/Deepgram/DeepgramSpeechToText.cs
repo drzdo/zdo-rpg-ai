@@ -58,6 +58,7 @@ public class DeepgramSpeechToText : ISpeechToText {
             _finishing = false;
             _sessionCts = new CancellationTokenSource();
             _sessionTask = Task.Run(() => RunSessionAsync(_sessionCts.Token));
+            Log.Debug("Create new sessionTask");
         }
     }
 
@@ -182,6 +183,7 @@ public class DeepgramSpeechToText : ISpeechToText {
                 wasFinishing = _finishing;
                 transcript = _accumulatedTranscript.Trim();
                 _sessionTask = null;
+                Log.Debug("Set sessionTask to null");
                 _pendingBuffers = null;
                 _finishing = false;
             }

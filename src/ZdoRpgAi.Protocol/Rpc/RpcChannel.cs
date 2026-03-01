@@ -36,6 +36,8 @@ public class RpcChannel : IRpcChannel {
         return id;
     }
 
+    public Task RunAsync() => _channel.RunAsync();
+
     public async Task<Message> CallAsync(string type, JsonObject? payload = null, int? timeoutMs = null) {
         var id = Interlocked.Increment(ref _nextId);
         var tcs = new TaskCompletionSource<Message>();
@@ -70,8 +72,10 @@ public class RpcChannel : IRpcChannel {
             lock (_pending) {
                 _pending.Remove(msg.ResponseTo.Value, out tcs);
             }
-            tcs?.TrySetResult(msg);
-            return;
+            if (tcs != null) {
+                tcs.TrySetResult(msg);
+                return;
+            }
         }
 
         MessageReceived?.Invoke(msg);

@@ -3,11 +3,9 @@ namespace ZdoRpgAi.Protocol.Messages;
 // Client → Mod
 
 public enum ClientToModMessageType {
-    StartSession,
     SayMp3File,
 }
 
-public record StartSessionPayload(string SessionId);
 public record SayMp3FilePayload(string NpcId, string Mp3Name, string Text, double? DurationSec = null);
 
 // Mod → Client

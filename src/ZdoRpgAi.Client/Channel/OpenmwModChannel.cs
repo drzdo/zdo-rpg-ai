@@ -1,7 +1,6 @@
 using System.Text.Json.Nodes;
 using ZdoRpgAi.Core;
 using ZdoRpgAi.Protocol.Channel;
-using ZdoRpgAi.Protocol.Messages;
 
 namespace ZdoRpgAi.Client.Channel;
 
@@ -25,7 +24,7 @@ public class OpenmwModChannel : IChannel {
     // Outgoing state
     private readonly List<(int Id, string Json)> _pendingMessages = new();
     private readonly SemaphoreSlim _writeLock = new(1, 1);
-    private int _lastProcessedModMsgId;
+    private readonly string _sessionId = Guid.NewGuid().ToString("N")[..8];
 
     // Incoming state (log tailing)
     private long _logPosition;
@@ -40,6 +39,8 @@ public class OpenmwModChannel : IChannel {
         _outFilePath = Path.Combine(dataDir, OutFileName);
         _logFilePath = logFilePath;
         _pollIntervalMs = pollIntervalMs;
+
+        Log.Trace($"OpenmwModChannel out={_outFilePath} in={logFilePath}");
     }
 
     public void SendMessage(Message msg) {
@@ -87,23 +88,21 @@ public class OpenmwModChannel : IChannel {
     }
 
     private async Task HandshakeAsync() {
-        var sessionId = Guid.NewGuid().ToString("N")[..8];
+        // Write session header so the mod can detect us
+        _writeLock.Wait();
+        try {
+            FlushOutFile();
+        }
+        finally {
+            _writeLock.Release();
+        }
 
-        // Build and write StartSession message directly to outfile
-        var payload = new StartSessionPayload(sessionId);
-        var data = JsonExtensions.SerializeToObject(payload, PayloadJsonContext.Default.StartSessionPayload);
-        var msg = new Message(nameof(ClientToModMessageType.StartSession), 1, null, data, null);
-        var json = msg.ToJson().ToJsonString();
-
-        _pendingMessages.Add((msg.Id, json));
-        FlushOutFile();
-
-        Log.Info("Waiting for mod handshake (sessionId={SessionId})...", sessionId);
+        Log.Info("Waiting for mod handshake (sessionId={SessionId})...", _sessionId);
 
         // Poll log for StartSessionAck with matching sessionId
         while (!_cts.Token.IsCancellationRequested) {
-            if (TryReadHandshakeAck(sessionId)) {
-                Log.Info("Connected to mod (sessionId={SessionId})", sessionId);
+            if (TryReadHandshakeAck(_sessionId)) {
+                Log.Info("Connected to mod (sessionId={SessionId})", _sessionId);
                 return;
             }
             await Task.Delay(_pollIntervalMs, _cts.Token);
@@ -112,6 +111,7 @@ public class OpenmwModChannel : IChannel {
 
     private bool TryReadHandshakeAck(string sessionId) {
         if (!File.Exists(_logFilePath)) {
+            Log.Trace($"Noop because file does not exist");
             return false;
         }
 
@@ -121,6 +121,7 @@ public class OpenmwModChannel : IChannel {
         }
 
         if (fileInfo.Length == _logPosition) {
+            Log.Trace($"Noop because file length is the same as last log position");
             return false;
         }
 
@@ -132,15 +133,19 @@ public class OpenmwModChannel : IChannel {
             newContent = reader.ReadToEnd();
             _logPosition = fs.Position;
         }
-        catch (IOException) {
+        catch (IOException e) {
+            Log.Trace($"Opening FileStream fails {e}");
             return false;
         }
 
         if (string.IsNullOrEmpty(newContent)) {
+            Log.Trace($"Noop because newContent is empty");
             return false;
         }
 
         foreach (var line in newContent.Split('\n')) {
+            Log.Trace($"TryReadHandshakeAck: got {line}");
+
             var ackIdx = line.IndexOf(AckPrefix, StringComparison.Ordinal);
             if (ackIdx >= 0) {
                 var idStr = line[(ackIdx + AckPrefix.Length)..].Trim();
@@ -171,15 +176,18 @@ public class OpenmwModChannel : IChannel {
                 continue;
             }
 
+            Log.Debug("Saw StartSessionAck");
+
             var ackSessionId = obj["data"]?["sessionId"]?.GetValue<string>();
             if (ackSessionId != sessionId) {
+                Log.Debug($"Saw StartSessionAck but for another session {ackSessionId}");
                 continue;
             }
 
             var msgId = obj["id"]?.GetValue<int>() ?? 0;
+            Log.Debug($"Saw StartSessionAck with msgId={msgId}");
             if (msgId > _lastSeenModMsgId) {
                 _lastSeenModMsgId = msgId;
-                _lastProcessedModMsgId = msgId;
             }
 
             return true;
@@ -194,7 +202,7 @@ public class OpenmwModChannel : IChannel {
 
     private void FlushOutFile() {
         var lines = new List<string>(_pendingMessages.Count + 1) {
-            $"lastProcessedMessageId:{_lastProcessedModMsgId}"
+            $"session:{_sessionId}"
         };
         foreach (var (_, json) in _pendingMessages) {
             lines.Add(json);
@@ -287,7 +295,6 @@ public class OpenmwModChannel : IChannel {
 
         if (msgId > _lastSeenModMsgId) {
             _lastSeenModMsgId = msgId;
-            _lastProcessedModMsgId = msgId;
         }
 
         var msg = Message.FromJson(obj);

@@ -19,19 +19,27 @@ public class StoryComposer {
     }
 
     public void OnPlayerSpeak(string playerId, string? targetCharacterId, string gameTime, string text) {
+        Log.Debug("OnPlayerSpeak");
         _ = OnPlayerSpeakAsync(playerId, targetCharacterId, gameTime, text);
     }
 
     private async Task OnPlayerSpeakAsync(string playerId, string? targetCharacterId, string gameTime, string text) {
-        var observerIds = await _directorHelper.QueryObserverIdsAsync(playerId, targetCharacterId != null ? [targetCharacterId] : null);
+        try {
+            Log.Trace("Querying observers for player {PlayerId}", playerId);
+            var observerIds = await _directorHelper.QueryObserverIdsAsync(playerId, targetCharacterId != null ? [targetCharacterId] : null);
+            Log.Trace("Got {Count} observers, registering event", observerIds.Length);
 
-        var evt = StoryEvent.Create(new StoryEvent.PlayerSpeak {
-            PlayerCharacterId = playerId,
-            TargetCharacterId = targetCharacterId,
-            GameTime = gameTime,
-            Text = text,
-        });
-        _story.RegisterEvent(evt, observerIds);
+            var evt = StoryEvent.Create(new StoryEvent.PlayerSpeak {
+                PlayerCharacterId = playerId,
+                TargetCharacterId = targetCharacterId,
+                GameTime = gameTime,
+                Text = text,
+            });
+            _story.RegisterEvent(evt, observerIds);
+        }
+        catch (Exception ex) {
+            Log.Error("OnPlayerSpeakAsync failed: {Error}", ex.Message);
+        }
     }
 
     private void OnMessageReceived(Message msg) {

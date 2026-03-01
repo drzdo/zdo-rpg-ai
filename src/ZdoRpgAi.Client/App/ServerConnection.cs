@@ -53,7 +53,7 @@ public class ServerConnection : IDisposable {
                 Connected?.Invoke(rpc);
 
                 using var reg = linked.Token.Register(() => rpc.Close());
-                await rpc.RunAsync();
+                await channel.RunWebSocketAsync();
             }
             catch (OperationCanceledException) {
                 break;

@@ -33,15 +33,19 @@ public class Director {
     }
 
     private void OnStoryEventRegistered(StoryEvent evt) {
+        Log.Debug("OnStoryEventRegistered");
+
         lock (_bufferLock) {
             _buffer.Add(evt);
             if (_processing) {
+                Log.Trace("Buffered event {EventType} while processing", evt.GetType().Name);
                 return;
             }
 
             _processing = true;
         }
 
+        Log.Trace("Starting drain for event {EventType}", evt.GetType().Name);
         _ = DrainBufferAsync();
     }
 
@@ -51,6 +55,7 @@ public class Director {
             lock (_bufferLock) {
                 if (_buffer.Count == 0) {
                     _processing = false;
+                    Log.Trace("Buffer drained, processing complete");
                     return;
                 }
 
@@ -59,6 +64,7 @@ public class Director {
             }
 
             if (batch.Count > 0) {
+                Log.Trace("Draining batch of {Count} events", batch.Count);
                 await ProcessStoryEventsAsync(batch);
             }
         }
@@ -73,8 +79,10 @@ public class Director {
             return;
         }
 
+        Log.Trace("Using strategy {Strategy}", strategy.GetType().Name);
         try {
             var newEvents = await strategy.ProcessStoryEventsAsync(events);
+            Log.Trace("Strategy returned {Count} new events", newEvents.Count);
             await RegisterAndPublishAsync(newEvents);
         }
         catch (Exception ex) {
@@ -83,6 +91,7 @@ public class Director {
     }
 
     private async Task RegisterAndPublishAsync(List<StoryEvent> events) {
+        Log.Trace("Registering and publishing {Count} events", events.Count);
         var observersCache = new Dictionary<string, string[]>();
         StoryEvent.NpcSpeak? npcSpeakEvent = null;
 
@@ -115,14 +124,20 @@ public class Director {
             var npc = await _npcRepo.GetNpcInfoAsync(npcSpeakEvent.NpcCharacterId);
             if (npc != null) {
                 var iterationBeforeGeneration = _playerInterruptionIteration;
+                Log.Trace("Generating speech for NPC {NpcId}", npcSpeakEvent.NpcCharacterId);
                 var mp3 = await _npcSpeechGenerator.GenerateAsync(npc, npcSpeakEvent.Text);
                 if (_playerInterruptionIteration == iterationBeforeGeneration && mp3 != null) {
+                    Log.Trace("Publishing MP3 for NPC {NpcId}", npcSpeakEvent.NpcCharacterId);
                     _directorHelper.PublishNpcSpeaksMp3(npcSpeakEvent.NpcCharacterId, npcSpeakEvent.Text, mp3);
 
                     var durationMs = (int)((Mp3Duration.Estimate(mp3.Mp3Bytes) ?? 0) * 1000);
                     if (durationMs > 0) {
+                        Log.Trace("Waiting {DurationMs}ms for speech playback", durationMs);
                         await WaitUnlessInterruptedAsync(durationMs, iterationBeforeGeneration);
                     }
+                }
+                else if (_playerInterruptionIteration != iterationBeforeGeneration) {
+                    Log.Trace("Speech generation interrupted by player for NPC {NpcId}", npcSpeakEvent.NpcCharacterId);
                 }
             }
             else {
@@ -147,6 +162,9 @@ public class Director {
     }
 
     private IDirectorStrategy? DetermineStrategy(List<StoryEvent> events) {
+        var lastEventType = events.Last().GetType().Name;
+        Log.Trace("Determining strategy for last event type {EventType}", lastEventType);
+
         if (events.Last() is StoryEvent.PlayerSpeak) {
             return _simpleReactive;
         }

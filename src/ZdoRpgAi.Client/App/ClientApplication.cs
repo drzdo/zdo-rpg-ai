@@ -55,7 +55,7 @@ public class ClientApplication : IDisposable {
 
         switch (msg.Type) {
             case nameof(ServerToClientMessageType.NpcSpeaksMp3):
-                HandleNpcSpeaksMp3(msg);
+                _ = HandleNpcSpeaksMp3Async(msg);
                 break;
             case nameof(ServerToModMessageType.SpeechRecognitionInProgress): {
                     var p = msg.Json?.DeserializeSafe(PayloadJsonContext.Default.SpeechRecognitionInProgressPayload);
@@ -81,7 +81,7 @@ public class ClientApplication : IDisposable {
         }
     }
 
-    private void HandleNpcSpeaksMp3(Message msg) {
+    private async Task HandleNpcSpeaksMp3Async(Message msg) {
         if (msg.Binary == null || msg.Json == null) {
             return;
         }
@@ -94,6 +94,8 @@ public class ClientApplication : IDisposable {
         var mp3Name = _mp3.SaveMp3(msg.Binary);
         Log.Info("NPC {NpcId} speaks: '{Text}' (audio: {Mp3Name}, duration: {Duration:F1}s)",
             payload.NpcId, payload.Text, mp3Name, payload.DurationSec);
+
+        await Task.Delay(200);
 
         var text = _stripDiacritics ? DiacriticsStripper.Strip(payload.Text) : payload.Text;
         var sayPayload = new SayMp3FilePayload(payload.NpcId, mp3Name, text, payload.DurationSec);

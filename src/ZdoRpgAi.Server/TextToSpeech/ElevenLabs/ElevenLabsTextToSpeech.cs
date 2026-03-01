@@ -17,6 +17,8 @@ public class ElevenLabsTextToSpeech : ITextToSpeech {
     private readonly Dictionary<string, string> _voiceIdByRaceSex;
 
     public ElevenLabsTextToSpeech(ElevenLabsConfig config) {
+        ArgumentNullException.ThrowIfNull(config.VoiceIdMapping.Fallback, "ElevenLabs.VoiceIdMapping.Fallback");
+        ArgumentNullException.ThrowIfNull(config.VoiceIdMapping.ByRaceSex, "ElevenLabs.VoiceIdMapping.ByRaceSex");
         _model = config.Model;
         _stability = config.Stability;
         _similarityBoost = config.SimilarityBoost;

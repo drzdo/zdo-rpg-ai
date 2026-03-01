@@ -50,4 +50,8 @@ public class ReusableRpcChannel : IRpcChannel {
     private void OnUnderlyingDisconnected() {
         Disconnected?.Invoke();
     }
+
+    public Task RunAsync() {
+        return Task.CompletedTask;
+    }
 }

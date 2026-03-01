@@ -12,6 +12,7 @@ public class PlayerMessageHandler {
     private readonly ISpeechToText _stt;
     private readonly IRpcChannel _rpc;
     private SpeakingSession? _activeSession;
+    private SpeakingSession? _finishingSession;
 
     public event Action<string, string?, string, string>? PlayerSpoke;
 
@@ -70,7 +71,8 @@ public class PlayerMessageHandler {
     }
 
     private void HandlePlayerStopSpeak(Message msg) {
-        if (_activeSession == null) {
+        var session = _activeSession;
+        if (session == null) {
             Log.Warn("Received PlayerStopSpeak without an active speaking session");
             return;
         }
@@ -80,13 +82,15 @@ public class PlayerMessageHandler {
             return;
         }
 
+        _activeSession = null;
+
         if (payload.Cancel) {
             Log.Info("Player {PlayerId} cancelled speaking", payload.PlayerId);
             _stt.Cancel();
-            _activeSession = null;
         }
         else {
             Log.Info("Player {PlayerId} stopped speaking", payload.PlayerId);
+            _finishingSession = session;
             _stt.Finish();
         }
     }
@@ -107,7 +111,8 @@ public class PlayerMessageHandler {
     }
 
     private void OnFinalResultReceived(string text) {
-        var session = _activeSession;
+        var session = _finishingSession ?? _activeSession;
+        _finishingSession = null;
         _activeSession = null;
 
         if (session == null) {
