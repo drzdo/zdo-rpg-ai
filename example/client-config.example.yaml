@@ -13,12 +13,18 @@ server:
   reconnectDelayMs: 2000
   clientToken: ""
 
-# OpenMW mod IPC
+# Mod connection
+# provider: openmw | emulator
 mod:
-  dataDir: /path/to/openmw/data
-  logFilePath: /path/to/openmw/openmw.log
-  mp3MaxFiles: 10
-  pollIntervalMs: 50
+  provider: openmw
+  emulator:
+    host: localhost
+    port: 8081
+  openmw:
+    dataDir: /path/to/openmw/data
+    logFilePath: /path/to/openmw/openmw.log
+    mp3MaxFiles: 10
+    pollIntervalMs: 50
 
 stripDiacritics: false
 

@@ -23,6 +23,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZdoRpgAi.Server", "src\ZdoR
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZdoRpgAi.Server.Console", "src\ZdoRpgAi.Server.Console\ZdoRpgAi.Server.Console.csproj", "{5B2740AE-A73D-4738-A3FF-1DA5E61220CA}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZdoRpgAi.ModEmulator.Console", "src\ZdoRpgAi.ModEmulator.Console\ZdoRpgAi.ModEmulator.Console.csproj", "{53F85764-7481-4E0E-BA98-231EE5E5C8D6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -141,6 +143,18 @@ Global
 		{5B2740AE-A73D-4738-A3FF-1DA5E61220CA}.Release|x64.Build.0 = Release|Any CPU
 		{5B2740AE-A73D-4738-A3FF-1DA5E61220CA}.Release|x86.ActiveCfg = Release|Any CPU
 		{5B2740AE-A73D-4738-A3FF-1DA5E61220CA}.Release|x86.Build.0 = Release|Any CPU
+		{53F85764-7481-4E0E-BA98-231EE5E5C8D6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{53F85764-7481-4E0E-BA98-231EE5E5C8D6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{53F85764-7481-4E0E-BA98-231EE5E5C8D6}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{53F85764-7481-4E0E-BA98-231EE5E5C8D6}.Debug|x64.Build.0 = Debug|Any CPU
+		{53F85764-7481-4E0E-BA98-231EE5E5C8D6}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{53F85764-7481-4E0E-BA98-231EE5E5C8D6}.Debug|x86.Build.0 = Debug|Any CPU
+		{53F85764-7481-4E0E-BA98-231EE5E5C8D6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{53F85764-7481-4E0E-BA98-231EE5E5C8D6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{53F85764-7481-4E0E-BA98-231EE5E5C8D6}.Release|x64.ActiveCfg = Release|Any CPU
+		{53F85764-7481-4E0E-BA98-231EE5E5C8D6}.Release|x64.Build.0 = Release|Any CPU
+		{53F85764-7481-4E0E-BA98-231EE5E5C8D6}.Release|x86.ActiveCfg = Release|Any CPU
+		{53F85764-7481-4E0E-BA98-231EE5E5C8D6}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -155,5 +169,6 @@ Global
 		{32577F4F-0604-479B-915F-949EDCF65884} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{6D471C11-2921-43D3-845C-29BB2E08EF4E} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{5B2740AE-A73D-4738-A3FF-1DA5E61220CA} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{53F85764-7481-4E0E-BA98-231EE5E5C8D6} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 	EndGlobalSection
 EndGlobal

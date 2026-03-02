@@ -12,9 +12,25 @@ public class ClientConfig {
     public bool StripDiacritics { get; set; }
 }
 
+public enum ModProvider {
+    Openmw,
+    Emulator,
+}
+
 public class ModConnectionConfig {
+    public ModProvider Provider { get; set; } = ModProvider.Openmw;
+    public EmulatorModConnectionConfig Emulator { get; set; } = new();
+    public OpenmwModConnectionConfig Openmw { get; set; } = new();
+}
+
+public class OpenmwModConnectionConfig {
     public string DataDir { get; set; } = "";
     public string LogFilePath { get; set; } = "";
     public int Mp3MaxFiles { get; set; } = 10;
     public int PollIntervalMs { get; set; } = 50;
+}
+
+public class EmulatorModConnectionConfig {
+    public string Host { get; set; } = "localhost";
+    public int Port { get; set; } = 8081;
 }

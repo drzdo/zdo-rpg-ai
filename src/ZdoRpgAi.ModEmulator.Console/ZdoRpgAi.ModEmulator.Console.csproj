@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <PublishAot>true</PublishAot>
+  </PropertyGroup>
+
+  <ItemGroup Condition="Exists('BuildInfo.g.cs')">
+    <Compile Remove="BuildInfo.cs" />
+  </ItemGroup>
+
+  <Target Name="GenerateBuildInfo" BeforeTargets="CoreCompile">
+    <Exec Command="git rev-parse --short HEAD" ConsoleToMSBuild="true" StandardOutputImportance="low">
+      <Output TaskParameter="ConsoleOutput" PropertyName="GitHash" />
+    </Exec>
+    <WriteLinesToFile File="BuildInfo.g.cs" Overwrite="true" Lines="static partial class BuildInfo { public const string Version = %221.0 ($(GitHash))%22%3B }" />
+    <ItemGroup>
+      <Compile Remove="BuildInfo.cs" />
+      <Compile Remove="BuildInfo.g.cs" />
+      <Compile Include="BuildInfo.g.cs" />
+    </ItemGroup>
+  </Target>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ZdoRpgAi.Protocol\ZdoRpgAi.Protocol.csproj" />
+    <ProjectReference Include="..\ZdoRpgAi.Core\ZdoRpgAi.Core.csproj" />
+    <ProjectReference Include="..\ZdoRpgAi.Util\ZdoRpgAi.Util.csproj" />
+  </ItemGroup>
+
+</Project>
