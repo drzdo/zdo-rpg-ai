@@ -51,7 +51,7 @@ sudo chmod -R 750 /opt/zdo-rpg-ai
 
 5. Generate a shared client token.
 
-The same token must be used by the server and every client bridge that connects to it.
+The same token must be used by the server and every Client that connects to it.
 
 ```sh
 openssl rand -hex 32
@@ -153,18 +153,15 @@ Use [example/server-config.example.yaml](example/server-config.example.yaml) as 
 
 ## Client configuration
 
-The server does not connect to OpenMW directly. The expected setup is:
+The expected setup is:
 
-- the server runs on a Linux machine
+- the [Server](https://github.com/drzdo/zdo-rpg-ai) runs on a separate machine
 - OpenMW runs on the game machine
-- `ZdoRpgAi.Client.Console` runs on the game machine and bridges the game mod to the server
+- the [Client](https://github.com/drzdo/zdo-rpg-ai) runs on the game machine and bridges this mod to the server
 
-For OpenMW, add the mod to `openmw.cfg`:
+For OpenMW-specific mod and game setup, see:
 
-```ini
-data="/path/to/zdo-rpg-ai-openmw-mod/zdorpgai"
-content=zdorpgai.omwscripts
-```
+- https://github.com/drzdo/zdo-rpg-ai-openmw-mod
 
 Create a client config file on the machine where OpenMW is running:
 
@@ -188,7 +185,7 @@ Notes:
 - `dataDir` must match the mod directory registered in `openmw.cfg`
 - `logFilePath` must point to the real OpenMW log file on the game machine
 
-Run the client bridge on the game machine:
+Run the Client on the game machine:
 
 ```sh
 dotnet run --project src/ZdoRpgAi.Client.Console -- --config /path/to/client-config.yaml
