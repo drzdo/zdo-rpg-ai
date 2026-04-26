@@ -5,7 +5,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using ZdoRpgAi.Core;
 using ZdoRpgAi.Protocol.Channel;
-using ZdoRpgAi.Protocol.Rpc;
 using ZdoRpgAi.Server.Bootstrap;
 
 namespace ZdoRpgAi.Server.Http;
@@ -38,13 +37,20 @@ public class HttpServer {
             return context.Response.WriteAsync("pong");
         });
 
+        _app.Map("/metrics", context => {
+            context.Response.ContentType = "text/plain; version=0.0.4; charset=utf-8";
+            return context.Response.WriteAsync(ServerMetrics.RenderPrometheusText(GetActiveChannelCount()));
+        });
+
         _app.Map("/ws", async context => {
             if (!context.WebSockets.IsWebSocketRequest) {
+                ServerMetrics.RecordWebSocketRejected(WebSocketRejectionReason.NotWebSocket);
                 context.Response.StatusCode = 400;
                 return;
             }
 
             if (_clientToken.Length > 0 && context.Request.Headers["X-ZdoRpgAi-Client"] != _clientToken) {
+                ServerMetrics.RecordWebSocketRejected(WebSocketRejectionReason.BadToken);
                 context.Response.StatusCode = 403;
                 return;
             }
@@ -56,16 +62,20 @@ public class HttpServer {
                 _activeChannels.Add(channel);
             }
 
-            Log.Info("Client connected");
-            ClientConnected?.Invoke(channel);
+            ServerMetrics.RecordWebSocketAccepted();
 
-            await channel.RunWebSocketAsync();
-
-            lock (_activeChannels) {
-                _activeChannels.Remove(channel);
+            try {
+                Log.Info("Client connected");
+                ClientConnected?.Invoke(channel);
+                await channel.RunWebSocketAsync();
             }
+            finally {
+                lock (_activeChannels) {
+                    _activeChannels.Remove(channel);
+                }
 
-            Log.Info("Client disconnected");
+                Log.Info("Client disconnected");
+            }
         });
     }
 
@@ -78,5 +88,11 @@ public class HttpServer {
             }
         });
         await _app.RunAsync(ct);
+    }
+
+    private int GetActiveChannelCount() {
+        lock (_activeChannels) {
+            return _activeChannels.Count;
+        }
     }
 }
